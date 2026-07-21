@@ -1,77 +1,141 @@
 # Almayo Studio
 
-Personal portfolio + admin CMS on **Next.js + Supabase + Vercel**.
+**Developer · Designer · Creative Technologist**
 
-## Structure
+Hi, I'm **Almayo Ibrahim** — I design and build digital products end to end: brand identity, UI/UX, and production-ready web applications. This repository powers my personal portfolio and studio website, **Almayo Studio**.
+
+🌐 **Website:** [almayostudio.com](https://almayostudio.com) *(update when live)*  
+📍 **Based in:** Kuwait · Working with clients in Kuwait, EU, and beyond  
+📧 **Contact:** [almayo.online@gmail.com](mailto:almayo.online@gmail.com)
+
+---
+
+## About this project
+
+This is not a template — it is my **live portfolio and business platform**, built to showcase work, manage client relationships, and run day-to-day studio operations from one stack.
+
+**Public site** — portfolio, case studies, catalogs, client showcase, contact, resume, and client-facing review/signing flows.
+
+**Admin dashboard** — CMS to manage projects, clients, leads, invoices, expenses, contracts, and social campaigns without touching code.
+
+Companies and recruiters browsing my GitHub can use this repo to see how I think about **design, architecture, security, and shipping real products**.
+
+---
+
+## What I built
+
+### Public portfolio (`landing-page/`)
+- Project and catalog galleries with rich media
+- Client showcase and about page with live stats
+- Contact form with validation and spam protection
+- Campaign review portal (password-protected, client approvals)
+- Contract signing with audit trail
+- Responsive UI with motion and 3D hero scene
+
+### Studio dashboard (`dashboard/`)
+- Full CMS for projects, catalogs, clients, and site settings
+- CRM: leads pipeline and CSV export
+- Invoices with PDF generation, discounts, and payment history
+- Expense tracking
+- Contract builder with dual signing workflow
+- Social campaign manager with review links and asset approvals
+- Secure file uploads with type validation and malware scanning
+- Two-factor authentication for admin access
+
+### Backend & security (`supabase/`)
+- PostgreSQL schema with Row Level Security
+- Rate limiting on public APIs
+- Admin allowlist and private storage buckets
+- Server-side auth for review, contracts, and contact flows
+
+---
+
+## Tech stack
+
+| Layer | Technologies |
+|-------|----------------|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
+| Animation | Framer Motion, Three.js, React Three Fiber |
+| Backend | Supabase (Auth, Postgres, Storage) |
+| CMS / Admin | Custom dashboard on Next.js |
+| Rich content | TipTap editor |
+| PDF | pdf-lib |
+| Deploy | Vercel |
+
+---
+
+## Project structure
 
 ```text
 almayo-studio/
-├── landing-page/              # Public site (port 3000)
-├── dashboard/                 # Admin CMS (port 3001)
-├── supabase/                  # SQL migrations (run in order)
-└── portfolio-old-reference/   # Old repo (reference only, gitignored)
+├── landing-page/     # Public portfolio website
+├── dashboard/        # Admin CMS
+└── supabase/         # Database migrations
 ```
 
-## Setup
+---
 
-### 1. Create a Supabase project
+## For recruiters & hiring teams
 
-1. Go to [supabase.com](https://supabase.com) and create a project
-2. Open **SQL Editor** and run these files **in order**:
-   - `supabase/schema.sql`
-   - `supabase/schema_parity.sql`
-   - `supabase/schema_contracts.sql`
-   - `supabase/schema_campaigns.sql`
-   - `supabase/schema_about_depth.sql`
-   - `supabase/schema_testimonials.sql`
-   - `supabase/schema_updates.sql`
-   - `supabase/schema_security.sql`
-3. **Authentication → Users** → add your admin user
-4. **Authentication → Providers** → disable public signups
-5. Add your email to the admin allowlist:
-   ```sql
-   insert into public.admin_allowlist (email) values ('your@email.com');
-   ```
-6. Copy **Project URL**, **anon key**, and **service role key** from **Settings → API**
+This repo demonstrates:
 
-For password reset emails, in **Authentication → URL Configuration**:
-- Site URL: `http://localhost:3001` (local) or your dashboard domain
-- Redirect URLs: `http://localhost:3001/reset-password`
+- **Full-stack ownership** — from database design to UI polish
+- **Product thinking** — not just a static portfolio; includes CRM, invoicing, and client workflows
+- **Security awareness** — RLS, rate limits, 2FA, server-side validation, file scanning
+- **Design + code** — one person delivering brand, UX, and implementation
 
-### 2. Env files
+**Live demo:** *(add your Vercel URL after deploy)*  
+**Resume:** available on the site at `/resume`
+
+---
+
+## Local development
+
+<details>
+<summary>Setup instructions (for developers)</summary>
+
+### 1. Supabase
+
+Create a project at [supabase.com](https://supabase.com) and run SQL files in order:
+
+1. `schema.sql`
+2. `schema_parity.sql`
+3. `schema_contracts.sql`
+4. `schema_campaigns.sql`
+5. `schema_about_depth.sql`
+6. `schema_testimonials.sql`
+7. `schema_updates.sql`
+8. `schema_security.sql`
+
+### 2. Environment
 
 ```bash
 cp landing-page/.env.example landing-page/.env.local
 cp dashboard/.env.example dashboard/.env.local
 ```
 
-See each `.env.example` for required variables. Both apps need Supabase URL + anon key. Server routes also need `SUPABASE_SERVICE_ROLE_KEY`.
+Fill in Supabase URL, anon key, and service role key.
 
-### 3. Run locally
+### 3. Run
 
 ```bash
-# Terminal 1: public site
-cd landing-page
-npm install
-npm run dev
-
-# Terminal 2: admin
-cd dashboard
-npm install
-npm run dev -- -p 3001
+cd landing-page && npm install && npm run dev
+cd dashboard && npm install && npm run dev -- -p 3001
 ```
 
-- Landing: http://localhost:3000
+- Portfolio: http://localhost:3000  
 - Dashboard: http://localhost:3001
 
-### 4. Add content
+</details>
 
-1. Sign in at `/login` with your Supabase Auth user
-2. Enable 2FA under Settings → Security
-3. Create catalogs, projects, clients, and edit site settings
+---
 
-## Deploy
+## Connect
 
-Deploy `landing-page` and `dashboard` as **two separate Vercel projects** from this repo. Set the **Root Directory** for each project (`landing-page` and `dashboard`). Add env vars from each app's `.env.example`.
+- **GitHub:** [@almayox](https://github.com/almayox)
+- **Website:** [almayostudio.com](https://almayostudio.com)
+- **Email:** almayo.online@gmail.com
 
-Point your domain at the landing project when ready. Use a subdomain (e.g. `admin.almayostudio.com`) for the dashboard.
+---
+
+© Almayo Ibrahim · Almayo Studio
