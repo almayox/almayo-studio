@@ -1,0 +1,71 @@
+"use client";
+
+import { PaginationBar, usePagination } from "@/components/ui/Pagination";
+import { ActionGroup } from "@/components/ui/PageChrome";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Pencil } from "lucide-react";
+import { DeleteProjectButton } from "@/components/DeleteProjectButton";
+import type { Project } from "@/lib/types";
+
+export function ProjectsTable({ projects }: { projects: Project[] }) {
+  const pagination = usePagination(projects, 10);
+
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-mist bg-white">
+      <table className="min-w-full text-left text-sm">
+        <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
+          <tr>
+            <th className="px-4 py-3 font-medium">Title</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="hidden px-4 py-3 font-medium sm:table-cell">Featured</th>
+            <th className="px-4 py-3 font-medium text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-mist">
+          {pagination.pageItems.map((project) => (
+            <tr key={project.id} className="hover:bg-foam/40">
+              <td className="px-4 py-3">
+                <p className="font-medium text-navy">{project.title}</p>
+                <p className="text-xs text-navy/45">/{project.slug}</p>
+              </td>
+              <td className="px-4 py-3">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    project.is_visible
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {project.is_visible ? "Published" : "Draft"}
+                </span>
+              </td>
+              <td className="hidden px-4 py-3 text-navy/70 sm:table-cell">
+                {project.is_featured ? "Yes" : "-"}
+              </td>
+              <td className="px-4 py-3">
+                <ActionGroup>
+                  <ActionButton
+                    icon={Pencil}
+                    label="Edit"
+                    href={`/projects/${project.id}`}
+                  />
+                  <DeleteProjectButton id={project.id} title={project.title} />
+                </ActionGroup>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <PaginationBar
+        page={pagination.page}
+        pageSize={pagination.pageSize}
+        total={pagination.total}
+        totalPages={pagination.totalPages}
+        rangeStart={pagination.rangeStart}
+        rangeEnd={pagination.rangeEnd}
+        onPageChange={pagination.goTo}
+        onPageSizeChange={pagination.changePageSize}
+      />
+    </div>
+  );
+}

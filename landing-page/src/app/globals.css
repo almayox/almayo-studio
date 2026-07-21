@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0a1f44;
+  --navy-deep: #06142d;
+  --ink: #0c1222;
+  --foam: #f3f6fb;
+  --mist: #d7e0ef;
+  --accent: #c8a45a;
+  --background: var(--foam);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
+  --color-foam: var(--foam);
+  --color-mist: var(--mist);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, black 40%, transparent 95%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+  line-height: 1.6;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 40%, white);
+  color: var(--navy-deep);
+}
+
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

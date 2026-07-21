@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0a1f44;
+  --navy-deep: #06142d;
+  --foam: #f4f7fb;
+  --mist: #d9e2f0;
+  --ink: #101828;
+  --background: var(--foam);
+  --foreground: var(--ink);
+  --control-h: 42px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
+  --color-foam: var(--foam);
+  --color-mist: var(--mist);
+  --color-ink: var(--ink);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+@layer base {
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body), system-ui, sans-serif;
+    line-height: 1.6;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  /* Keep in @layer so Tailwind text-* utilities can override (fixes dark-on-navy links) */
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+}
+
+/* Unified form controls */
+.control {
+  box-sizing: border-box;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  max-height: var(--control-h);
+  padding: 0 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--mist);
+  background-color: #ffffff;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--navy);
+  outline: none;
+}
+
+.control:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--navy) 22%, transparent);
+}
+
+select.control {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%230a1f44' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 1rem;
+}
+
+textarea.control {
+  height: auto;
+  min-height: 6rem;
+  max-height: none;
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+
+/* Fallback for controls without .control class */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+select:not(.control) {
+  height: var(--control-h);
+  min-height: var(--control-h);
+  box-sizing: border-box;
+}
+
+textarea {
+  box-sizing: border-box;
+}
+
+/* Solid primary CTA: readable white on navy even if an ancestor sets color */
+.btn-primary {
+  display: inline-flex;
+  height: var(--control-h);
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: var(--navy);
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff !important;
+  transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: var(--navy-deep);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  height: var(--control-h);
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1px solid var(--mist);
+  background: #ffffff;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--navy) !important;
+  transition: background 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--foam);
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: color-mix(in srgb, var(--navy) 40%, transparent);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  border: 1px solid var(--mist);
+  padding: 0.35rem 0.5rem;
+  vertical-align: top;
+}
+
+.ProseMirror th {
+  background: color-mix(in srgb, var(--foam) 80%, white);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+}

@@ -1,0 +1,180 @@
+import { createClient } from "@/lib/supabase/client";
+import * as tus from "tus-js-client";
+import { validateUploadBasics } from "@/lib/fileScan";
+import { toStoredStorageUrl } from "@/lib/storage";
+
+const IMAGE_MAX_EDGE = 1920;
+const LOGO_MAX_EDGE = 512;
+const IMAGE_QUALITY = 0.82;
+const LOGO_QUALITY = 0.88;
+const RESUMABLE_THRESHOLD = 6 * 1024 * 1024;
+const CHUNK_SIZE = 6 * 1024 * 1024;
+const API_MAX_BYTES = 25 * 1024 * 1024;
+
+function safeName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-");
+}
+
+async function compressImage(
+  file: File,
+  maxEdge = IMAGE_MAX_EDGE,
+  quality = IMAGE_QUALITY,
+): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    return file;
+  }
+  const tinyThreshold = maxEdge <= LOGO_MAX_EDGE ? 80_000 : 400_000;
+  if (file.size < tinyThreshold || file.type === "image/gif") return file;
+
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const skipThreshold = maxEdge <= LOGO_MAX_EDGE ? 300_000 : 1_200_000;
+  if (scale >= 1 && file.size < skipThreshold) {
+    bitmap.close();
+    return file;
+  }
+
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    bitmap.close();
+    return file;
+  }
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob: Blob | null = await new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), "image/webp", quality);
+  });
+
+  const outBlob =
+    blob ||
+    (await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", quality),
+    ));
+
+  if (!outBlob || outBlob.size >= file.size * 0.95) return file;
+
+  const ext = outBlob.type === "image/webp" ? "webp" : "jpg";
+  const base = safeName(file.name.replace(/\.[^.]+$/, "")) || "image";
+  return new File([outBlob], `${base}.${ext}`, { type: outBlob.type });
+}
+
+async function uploadViaApi(
+  bucket: string,
+  folder: string,
+  file: File,
+): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("bucket", bucket);
+  form.append("folder", folder);
+  const res = await fetch("/api/upload", { method: "POST", body: form });
+  const data = (await res.json()) as { url?: string; message?: string };
+  if (!res.ok) throw new Error(data.message || "Upload failed");
+  if (!data.url) throw new Error("Upload failed");
+  return data.url;
+}
+
+async function scanLargeUpload(bucket: string, path: string) {
+  const res = await fetch("/api/upload/scan-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bucket, path }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(data.message || "Uploaded file failed security scan.");
+  }
+}
+
+async function uploadResumable(
+  bucket: string,
+  path: string,
+  file: File,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("Sign in required to upload.");
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      endpoint: `${url}/storage/v1/upload/resumable`,
+      retryDelays: [0, 1000, 3000, 5000],
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "x-upsert": "false",
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: CHUNK_SIZE,
+      metadata: {
+        bucketName: bucket,
+        objectName: path,
+        contentType: file.type || "application/octet-stream",
+        cacheControl: "3600",
+      },
+      onError: (error) => reject(error),
+      onProgress: (bytesUploaded, bytesTotal) => {
+        if (!onProgress || !bytesTotal) return;
+        onProgress(Math.round((bytesUploaded / bytesTotal) * 100));
+      },
+      onSuccess: () => resolve(),
+    });
+    upload.start();
+  });
+
+  await scanLargeUpload(bucket, path);
+  return toStoredStorageUrl(bucket, path);
+}
+
+export type UploadOptions = {
+  bucket?: string;
+  folder: string;
+  onProgress?: (pct: number) => void;
+  optimizeImage?: boolean;
+  maxEdge?: number;
+  imageQuality?: number;
+};
+
+export async function uploadStudioFile(
+  file: File,
+  options: UploadOptions,
+): Promise<string> {
+  const bucket = options.bucket || "studio-files";
+  const optimize = options.optimizeImage !== false;
+  const maxEdge = options.maxEdge ?? IMAGE_MAX_EDGE;
+  const quality = options.imageQuality ?? (maxEdge <= LOGO_MAX_EDGE ? LOGO_QUALITY : IMAGE_QUALITY);
+  const prepared =
+    optimize && file.type.startsWith("image/")
+      ? await compressImage(file, maxEdge, quality)
+      : file;
+
+  const basics = validateUploadBasics(prepared, API_MAX_BYTES);
+  if (!basics.ok) throw new Error(basics.reason);
+
+  const ext = prepared.name.split(".").pop() || "bin";
+  const path = `${options.folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  options.onProgress?.(0);
+
+  if (prepared.size >= RESUMABLE_THRESHOLD) {
+    const url = await uploadResumable(bucket, path, prepared, options.onProgress);
+    options.onProgress?.(100);
+    return url;
+  }
+
+  const url = await uploadViaApi(bucket, options.folder, prepared);
+  options.onProgress?.(100);
+  return url;
+}
