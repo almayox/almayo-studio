@@ -2,21 +2,21 @@
 
 **Developer · Designer · Creative Technologist**
 
-Hi, I'm **Almayo Ibrahim** — I design and build digital products end to end: brand identity, UI/UX, and production-ready web applications. This repository powers my personal portfolio and studio website, **Almayo Studio**.
+Hi, I'm **Almayo Ibrahim**. I design and build digital products end to end: brand identity, UI/UX, and production-ready web applications. This repository powers my personal portfolio and studio website, **Almayo Studio**.
 
 🌐 **Website:** [almayostudio.com](https://almayostudio.com) *(update when live)*  
-📍 **Based in:** Kuwait · Working with clients in Kuwait, EU, and beyond  
+📍 **Based in:** Kuwait · Working with clients in Kuwait, EU, and Ethiopia  
 📧 **Contact:** [almayo.online@gmail.com](mailto:almayo.online@gmail.com)
 
 ---
 
 ## About this project
 
-This is not a template — it is my **live portfolio and business platform**, built to showcase work, manage client relationships, and run day-to-day studio operations from one stack.
+This is not a template. It is my **live portfolio and business platform**, built to showcase work, manage client relationships, and run day-to-day studio operations from one stack.
 
-**Public site** — portfolio, case studies, catalogs, client showcase, contact, resume, and client-facing review/signing flows.
+**Public site:** portfolio, case studies, catalogs, client showcase, contact, resume, and client-facing review/signing flows.
 
-**Admin dashboard** — CMS to manage projects, clients, leads, invoices, expenses, contracts, and social campaigns without touching code.
+**Admin dashboard:** CMS to manage projects, clients, leads, invoices, expenses, contracts, and social campaigns without touching code.
 
 Companies and recruiters browsing my GitHub can use this repo to see how I think about **design, architecture, security, and shipping real products**.
 
@@ -79,54 +79,12 @@ almayo-studio/
 
 This repo demonstrates:
 
-- **Full-stack ownership** — from database design to UI polish
-- **Product thinking** — not just a static portfolio; includes CRM, invoicing, and client workflows
-- **Security awareness** — RLS, rate limits, 2FA, server-side validation, file scanning
-- **Design + code** — one person delivering brand, UX, and implementation
+- **Full-stack ownership:** from database design to UI polish
+- **Product thinking:** not just a static portfolio; includes CRM, invoicing, and client workflows
+- **Security awareness:** RLS, rate limits, 2FA, server-side validation, file scanning
+- **Design + code:** one person delivering brand, UX, and implementation
 
-**Live demo:** *(add your Vercel URL after deploy)*  
-**Resume:** available on the site at `/resume`
-
----
-
-## Local development
-
-<details>
-<summary>Setup instructions (for developers)</summary>
-
-### 1. Supabase
-
-Create a project at [supabase.com](https://supabase.com) and run SQL files in order:
-
-1. `schema.sql`
-2. `schema_parity.sql`
-3. `schema_contracts.sql`
-4. `schema_campaigns.sql`
-5. `schema_about_depth.sql`
-6. `schema_testimonials.sql`
-7. `schema_updates.sql`
-8. `schema_security.sql`
-
-### 2. Environment
-
-```bash
-cp landing-page/.env.example landing-page/.env.local
-cp dashboard/.env.example dashboard/.env.local
-```
-
-Fill in Supabase URL, anon key, and service role key.
-
-### 3. Run
-
-```bash
-cd landing-page && npm install && npm run dev
-cd dashboard && npm install && npm run dev -- -p 3001
-```
-
-- Portfolio: http://localhost:3000  
-- Dashboard: http://localhost:3001
-
-</details>
+**Resume:** available on the site in the About page.
 
 ---
 
