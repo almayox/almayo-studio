@@ -19,7 +19,7 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import type { Expense } from "@/lib/types";
 
 const emptyForm = {
@@ -41,6 +41,7 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [saving, setSaving] = useState(false);
   const [currencyFilter, setCurrencyFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -124,14 +125,19 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
     const file = files[0];
     if (!file) return;
     setUploading(true);
+    setUploadPhase("uploading");
     setError(null);
     try {
-      const publicUrl = await uploadStudioFile(file, { folder: "expenses" });
+      const publicUrl = await uploadStudioFile(file, {
+        folder: "expenses",
+        onPhase: setUploadPhase,
+      });
       setForm((p) => ({ ...p, receiptUrl: publicUrl }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadPhase(null);
     }
   }
 
@@ -420,7 +426,7 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
             className="flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-foam px-3 py-5 text-center text-sm text-navy/70"
           >
             {uploading
-              ? "Uploading…"
+              ? uploadStatusLabel(uploadPhase)
               : form.receiptUrl
                 ? "Replace receipt"
                 : "Drop receipt"}

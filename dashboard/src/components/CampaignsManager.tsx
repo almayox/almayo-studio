@@ -19,10 +19,11 @@ import {
   softLinkClass,
 } from "@/components/ui/PageChrome";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { filterBySearch, ListFilters } from "@/components/ui/ListFilters";
 import { Copy, Eye, EyeOff, Pencil, Settings2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import { hashPassword } from "@/lib/password";
 import { StorageImage, StorageVideo } from "@/components/StorageMedia";
 import type {
@@ -101,6 +102,7 @@ export function CampaignsManager({
     type: "single" as "single" | "carousel" | "video" | "reel" | "story",
   });
   const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -452,6 +454,7 @@ export function CampaignsManager({
     const file = files[0];
     if (!file) return;
     setUploading(true);
+    setUploadPhase("uploading");
     setError(null);
     try {
       const publicUrl = await uploadToStorage(file);
@@ -466,6 +469,7 @@ export function CampaignsManager({
       setError(err instanceof Error ? err.message : "Cover upload failed");
     } finally {
       setUploading(false);
+      setUploadPhase(null);
     }
   }
 
@@ -491,7 +495,10 @@ export function CampaignsManager({
 
   async function uploadToStorage(file: File) {
     if (!selectedCampaign) throw new Error("Select a campaign first.");
-    return uploadStudioFile(file, { folder: `campaigns/${selectedCampaign}` });
+    return uploadStudioFile(file, {
+      folder: `campaigns/${selectedCampaign}`,
+      onPhase: setUploadPhase,
+    });
   }
 
   async function createAssetWithMedia(files: FileList) {
@@ -502,6 +509,7 @@ export function CampaignsManager({
     const file = files[0];
     if (!file) return;
     setUploading(true);
+    setUploadPhase("uploading");
     setError(null);
     try {
       const publicUrl = await uploadToStorage(file);
@@ -555,6 +563,7 @@ export function CampaignsManager({
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadPhase(null);
     }
   }
 
@@ -566,6 +575,7 @@ export function CampaignsManager({
     const file = files[0];
     if (!file) return;
     setUploading(true);
+    setUploadPhase("uploading");
     setError(null);
     try {
       const publicUrl = await uploadToStorage(file);
@@ -599,6 +609,7 @@ export function CampaignsManager({
       setError(err instanceof Error ? err.message : "Slide upload failed");
     } finally {
       setUploading(false);
+      setUploadPhase(null);
     }
   }
 
@@ -893,7 +904,7 @@ export function CampaignsManager({
               disabled={uploading}
               className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-3 py-5 text-center text-sm text-navy/70"
             >
-              {uploading ? "Uploading…" : "Drop cover image"}
+              {uploading ? uploadStatusLabel(uploadPhase) : "Drop cover image"}
             </DropUpload>
           </div>
 
@@ -1076,7 +1087,7 @@ export function CampaignsManager({
             disabled={uploading}
             className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-4 py-8 text-center text-sm text-navy/70"
           >
-            {uploading ? "Uploading…" : "Drop media to create asset"}
+            {uploading ? uploadStatusLabel(uploadPhase) : "Drop media to create asset"}
           </DropUpload>
           </div>
 
@@ -1258,7 +1269,7 @@ export function CampaignsManager({
                 disabled={uploading}
                 className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-4 py-6 text-center text-sm text-navy/70"
               >
-                {uploading ? "Uploading…" : "Drop slide media"}
+                {uploading ? uploadStatusLabel(uploadPhase) : "Drop slide media"}
               </DropUpload>
             </div>
           ) : null}
@@ -1393,33 +1404,29 @@ export function CampaignsManager({
           </label>
           <label className={labelClass}>
             Client
-            <select
+            <SearchSelect
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">Select client</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+              onChange={setClientId}
+              placeholder="Search clients…"
+              emptyLabel="Select client"
+              options={clients.map((client) => ({
+                value: client.id,
+                label: client.name,
+              }))}
+            />
           </label>
           <label className={labelClass}>
             Project
-            <select
+            <SearchSelect
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">Select project</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
+              onChange={setProjectId}
+              placeholder="Search projects…"
+              emptyLabel="Select project"
+              options={projects.map((project) => ({
+                value: project.id,
+                label: project.title,
+              }))}
+            />
           </label>
           <label className={labelClass}>
             Month

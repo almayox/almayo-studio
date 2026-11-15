@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import {
   CATALOG_ICON_OPTIONS,
   isCatalogIconUrl,
@@ -16,6 +16,7 @@ type Props = {
 export function CatalogIconPicker({ value, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const SelectedIcon = resolveCatalogIcon(isCatalogIconUrl(value) ? null : value);
@@ -24,18 +25,21 @@ export function CatalogIconPicker({ value, onChange }: Props) {
   async function onFileChange(file: File | null) {
     if (!file) return;
     setUploading(true);
+    setUploadPhase("compressing");
     setError(null);
     try {
       const url = await uploadStudioFile(file, {
         folder: "catalog-icons",
         maxEdge: 256,
         imageQuality: 0.9,
+        onPhase: setUploadPhase,
       });
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadPhase(null);
       if (inputRef.current) inputRef.current.value = "";
     }
   }
@@ -103,7 +107,7 @@ export function CatalogIconPicker({ value, onChange }: Props) {
           onClick={() => inputRef.current?.click()}
           className="rounded-xl border border-mist bg-white px-3 py-2 text-xs font-medium text-navy/75 hover:border-navy/20 hover:text-navy disabled:opacity-60"
         >
-          {uploading ? "Uploading…" : "Upload custom icon"}
+          {uploading ? uploadStatusLabel(uploadPhase) : "Upload custom icon"}
         </button>
         {hasCustomImage ? (
           <span className="text-xs text-navy/45">Using uploaded image</span>

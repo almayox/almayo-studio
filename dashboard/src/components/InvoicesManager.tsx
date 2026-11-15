@@ -16,6 +16,7 @@ import {
   ActionGroup,
 } from "@/components/ui/PageChrome";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { filterBySearch, ListFilters } from "@/components/ui/ListFilters";
 import {
   Copy,
@@ -705,10 +706,9 @@ export function InvoicesManager({
         <form onSubmit={onSubmit} className="space-y-3">
           <label className={labelClass}>
             Existing client
-            <select
+            <SearchSelect
               value={clientId}
-              onChange={(e) => {
-                const id = e.target.value;
+              onChange={(id) => {
                 setClientId(id);
                 const selected = clients.find((c) => c.id === id);
                 if (selected) {
@@ -717,15 +717,13 @@ export function InvoicesManager({
                   setClientAddress(selected.address || "");
                 }
               }}
-              className={fieldClass}
-            >
-              <option value="">Manual client</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Search clients…"
+              emptyLabel="Manual client"
+              options={clients.map((client) => ({
+                value: client.id,
+                label: client.name,
+              }))}
+            />
           </label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className={labelClass}>

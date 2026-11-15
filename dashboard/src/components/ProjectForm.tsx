@@ -12,8 +12,9 @@ import {
   primaryBtnClass,
   secondaryBtnClass,
 } from "@/components/ui/PageChrome";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import type { Catalog, Client, Project, ProjectMedia } from "@/lib/types";
 import { slugify } from "@/lib/types";
 
@@ -55,6 +56,7 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
 
   const autoSlug = useMemo(() => slugify(title), [title]);
 
@@ -63,6 +65,7 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
       bucket: "project-media",
       folder: "projects",
       onProgress: (pct) => setUploadProgress(pct),
+      onPhase: setUploadPhase,
     });
   }
 
@@ -72,6 +75,7 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
 
     setUploading(true);
     setUploadProgress(null);
+    setUploadPhase("uploading");
     setError(null);
     try {
       const uploaded = [];
@@ -87,6 +91,7 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
     } finally {
       setUploading(false);
       setUploadProgress(null);
+      setUploadPhase(null);
     }
   }
 
@@ -273,34 +278,30 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
 
         <label className="block text-sm font-medium text-navy">
           Catalog
-          <select
+          <SearchSelect
             value={catalogId}
-            onChange={(e) => setCatalogId(e.target.value)}
-            className={fieldClass}
-          >
-            <option value="">Uncategorized</option>
-            {catalogs.map((catalog) => (
-              <option key={catalog.id} value={catalog.id}>
-                {catalog.name}
-              </option>
-            ))}
-          </select>
+            onChange={setCatalogId}
+            placeholder="Search catalogs…"
+            emptyLabel="Uncategorized"
+            options={catalogs.map((catalog) => ({
+              value: catalog.id,
+              label: catalog.name,
+            }))}
+          />
         </label>
 
         <label className="block text-sm font-medium text-navy">
           Client
-          <select
+          <SearchSelect
             value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            className={fieldClass}
-          >
-            <option value="">No client</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
+            onChange={setClientId}
+            placeholder="Search clients…"
+            emptyLabel="No client"
+            options={(clients || []).map((client) => ({
+              value: client.id,
+              label: client.name,
+            }))}
+          />
         </label>
 
         <label className="block text-sm font-medium text-navy sm:col-span-2">
@@ -402,9 +403,7 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
         >
           <span className="font-[family-name:var(--font-display)] text-lg text-navy">
             {uploading
-              ? uploadProgress !== null
-                ? `Uploading ${uploadProgress}%…`
-                : "Uploading…"
+              ? uploadStatusLabel(uploadPhase, uploadProgress)
               : "Drop files here or click to upload"}
           </span>
           <span className="text-xs text-navy/50">PNG, JPG, WEBP, MP4. Multiple files supported.</span>
@@ -446,7 +445,11 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
           disabled={loading || uploading}
           className={primaryBtnClass}
         >
-          {loading ? "Saving…" : uploading ? "Uploading…" : "Save project"}
+          {loading
+            ? "Saving…"
+            : uploading
+              ? uploadStatusLabel(uploadPhase, uploadProgress)
+              : "Save project"}
         </button>
         <button
           type="button"

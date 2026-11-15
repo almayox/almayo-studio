@@ -97,6 +97,7 @@ async function uploadResumable(
   path: string,
   file: File,
   onProgress?: (pct: number) => void,
+  onPhase?: (phase: UploadPhase) => void,
 ): Promise<string> {
   const supabase = createClient();
   const {
@@ -134,18 +135,34 @@ async function uploadResumable(
     upload.start();
   });
 
+  onPhase?.("scanning");
   await scanLargeUpload(bucket, path);
   return toStoredStorageUrl(bucket, path);
 }
+
+export type UploadPhase = "compressing" | "uploading" | "scanning";
 
 export type UploadOptions = {
   bucket?: string;
   folder: string;
   onProgress?: (pct: number) => void;
+  onPhase?: (phase: UploadPhase) => void;
   optimizeImage?: boolean;
   maxEdge?: number;
   imageQuality?: number;
 };
+
+export function uploadStatusLabel(
+  phase: UploadPhase | null | undefined,
+  progress?: number | null,
+) {
+  if (phase === "compressing") return "Compressing…";
+  if (phase === "scanning") return "Scanning…";
+  if (typeof progress === "number" && progress > 0 && progress < 100) {
+    return `Uploading ${progress}%…`;
+  }
+  return "Uploading…";
+}
 
 export async function uploadStudioFile(
   file: File,
@@ -155,10 +172,11 @@ export async function uploadStudioFile(
   const optimize = options.optimizeImage !== false;
   const maxEdge = options.maxEdge ?? IMAGE_MAX_EDGE;
   const quality = options.imageQuality ?? (maxEdge <= LOGO_MAX_EDGE ? LOGO_QUALITY : IMAGE_QUALITY);
-  const prepared =
-    optimize && file.type.startsWith("image/")
-      ? await compressImage(file, maxEdge, quality)
-      : file;
+  const shouldCompress = optimize && file.type.startsWith("image/");
+  if (shouldCompress) options.onPhase?.("compressing");
+  const prepared = shouldCompress
+    ? await compressImage(file, maxEdge, quality)
+    : file;
 
   const basics = validateUploadBasics(prepared, API_MAX_BYTES);
   if (!basics.ok) throw new Error(basics.reason);
@@ -167,9 +185,16 @@ export async function uploadStudioFile(
   const path = `${options.folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   options.onProgress?.(0);
+  options.onPhase?.("uploading");
 
   if (prepared.size >= RESUMABLE_THRESHOLD) {
-    const url = await uploadResumable(bucket, path, prepared, options.onProgress);
+    const url = await uploadResumable(
+      bucket,
+      path,
+      prepared,
+      options.onProgress,
+      options.onPhase,
+    );
     options.onProgress?.(100);
     return url;
   }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import {
   fieldClass,
   labelClass,
@@ -141,6 +141,7 @@ export function AboutSettings({ about }: { about: AboutContent }) {
   const [certs, setCerts] = useState<CertDraft[]>(parseCerts(about.certifications));
 
   const [busy, setBusy] = useState<string | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [messages, setMessages] = useState<Record<string, string | null>>({});
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
@@ -202,9 +203,14 @@ export function AboutSettings({ about }: { about: AboutContent }) {
     const file = files[0];
     if (!file) return;
     setBusy("profile-upload");
+    setUploadPhase("compressing");
     setErr("profile", null);
     try {
-      const url = await uploadStudioFile(file, { folder: "profile", maxEdge: 800 });
+      const url = await uploadStudioFile(file, {
+        folder: "profile",
+        maxEdge: 800,
+        onPhase: setUploadPhase,
+      });
       setProfileUrl(url);
       const supabase = createClient();
       const { error } = await supabase
@@ -218,6 +224,7 @@ export function AboutSettings({ about }: { about: AboutContent }) {
       setErr("profile", err instanceof Error ? err.message : "Upload failed");
     } finally {
       setBusy(null);
+      setUploadPhase(null);
     }
   }
 
@@ -349,7 +356,9 @@ export function AboutSettings({ about }: { about: AboutContent }) {
           disabled={busy === "profile-upload"}
           className="flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-3 py-5 text-center text-sm text-navy/70"
         >
-          {busy === "profile-upload" ? "Uploading…" : "Drop profile photo"}
+          {busy === "profile-upload"
+            ? uploadStatusLabel(uploadPhase)
+            : "Drop profile photo"}
         </DropUpload>
         <label className={labelClass}>
           Skills (comma separated)

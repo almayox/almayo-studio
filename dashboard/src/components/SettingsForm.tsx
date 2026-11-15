@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import {
   fieldClass,
   labelClass,
@@ -191,6 +191,7 @@ export function SettingsForm({
   const [loading, setLoading] = useState(false);
   const [faviconUrl, setFaviconUrl] = useState(settings.favicon_url || "");
   const [faviconBusy, setFaviconBusy] = useState(false);
+  const [faviconPhase, setFaviconPhase] = useState<UploadPhase | null>(null);
   const router = useRouter();
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -265,9 +266,14 @@ export function SettingsForm({
     const file = files[0];
     if (!file) return;
     setFaviconBusy(true);
+    setFaviconPhase("compressing");
     setError(null);
     try {
-      const url = await uploadStudioFile(file, { folder: "brand", maxEdge: 256 });
+      const url = await uploadStudioFile(file, {
+        folder: "brand",
+        maxEdge: 256,
+        onPhase: setFaviconPhase,
+      });
       setFaviconUrl(url);
       const supabase = createClient();
       const { error: updateError } = await supabase
@@ -281,6 +287,7 @@ export function SettingsForm({
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setFaviconBusy(false);
+      setFaviconPhase(null);
     }
   }
 
@@ -462,7 +469,9 @@ export function SettingsForm({
             disabled={faviconBusy}
             className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-3 py-5 text-center text-sm text-navy/70"
           >
-            {faviconBusy ? "Uploading…" : "Drop favicon (32–256px recommended)"}
+            {faviconBusy
+              ? uploadStatusLabel(faviconPhase)
+              : "Drop favicon (32–256px recommended)"}
           </DropUpload>
         </div>
         <StatusMessages error={error} message={message} />

@@ -20,7 +20,7 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import { StorageImage } from "@/components/StorageMedia";
 import type { ClientStats } from "@/lib/types";
 import { slugify } from "@/lib/types";
@@ -42,6 +42,7 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
@@ -95,18 +96,21 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
     const file = files[0];
     if (!file) return;
     setUploading(true);
+    setUploadPhase("compressing");
     setError(null);
     try {
       const publicUrl = await uploadStudioFile(file, {
         folder: "clients",
         maxEdge: 512,
         imageQuality: 0.88,
+        onPhase: setUploadPhase,
       });
       setForm((prev) => ({ ...prev, logoUrl: publicUrl }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadPhase(null);
     }
   }
 
@@ -371,7 +375,11 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
             disabled={uploading}
             className="flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-foam px-3 py-5 text-center text-sm text-navy/70"
           >
-            {uploading ? "Uploading…" : form.logoUrl ? "Replace logo" : "Drop logo"}
+            {uploading
+              ? uploadStatusLabel(uploadPhase)
+              : form.logoUrl
+                ? "Replace logo"
+                : "Drop logo"}
           </DropUpload>
           {error ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

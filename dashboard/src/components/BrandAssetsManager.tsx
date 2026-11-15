@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStudioFile } from "@/lib/upload";
+import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import type { AboutContent, LogoVariant, SiteSettings } from "@/lib/types";
 
 const NAVBAR_LOGOS = [
@@ -39,6 +39,7 @@ export function BrandAssetsManager({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
 
   function logoUrl(variant: string) {
     const match = logos.find((l) => l.variant_type === variant);
@@ -51,10 +52,14 @@ export function BrandAssetsManager({
 
   async function saveSetting(field: "og_image_url", file: File) {
     setBusy(field);
+    setUploadPhase("uploading");
     setError(null);
     setMessage(null);
     try {
-      const url = await uploadStudioFile(file, { folder: "brand" });
+      const url = await uploadStudioFile(file, {
+        folder: "brand",
+        onPhase: setUploadPhase,
+      });
       const supabase = createClient();
       const { error: updateError } = await supabase
         .from("site_settings")
@@ -67,15 +72,20 @@ export function BrandAssetsManager({
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setBusy(null);
+      setUploadPhase(null);
     }
   }
 
   async function saveLogo(variant: string, file: File) {
     setBusy(variant);
+    setUploadPhase("uploading");
     setError(null);
     setMessage(null);
     try {
-      const url = await uploadStudioFile(file, { folder: "logos" });
+      const url = await uploadStudioFile(file, {
+        folder: "logos",
+        onPhase: setUploadPhase,
+      });
       const supabase = createClient();
       const { error: upsertError } = await supabase.from("logo_variants").upsert(
         { variant_type: variant, url },
@@ -88,6 +98,7 @@ export function BrandAssetsManager({
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setBusy(null);
+      setUploadPhase(null);
     }
   }
 
@@ -111,6 +122,7 @@ export function BrandAssetsManager({
             preview={logoUrl(slot.variant)}
             previewDark={slot.previewDark}
             busy={busy === slot.variant}
+            status={busy === slot.variant ? uploadStatusLabel(uploadPhase) : null}
             compact={compact}
             onFiles={(files) => {
               const file = files[0];
@@ -122,6 +134,7 @@ export function BrandAssetsManager({
           title="OG / share image"
           preview={settings.og_image_url}
           busy={busy === "og_image_url"}
+          status={busy === "og_image_url" ? uploadStatusLabel(uploadPhase) : null}
           compact={compact}
           onFiles={(files) => {
             const file = files[0];
@@ -151,6 +164,7 @@ function AssetSlot({
   preview,
   previewDark,
   busy,
+  status,
   compact,
   onFiles,
 }: {
@@ -159,6 +173,7 @@ function AssetSlot({
   preview: string | null | undefined;
   previewDark?: boolean;
   busy: boolean;
+  status?: string | null;
   compact?: boolean;
   onFiles: (files: FileList) => void;
 }) {
@@ -195,7 +210,7 @@ function AssetSlot({
         disabled={busy}
         className={dropClass}
       >
-        {busy ? "Uploading…" : "Drop or click to upload"}
+        {busy ? status || "Uploading…" : "Drop or click to upload"}
       </DropUpload>
     </div>
   );

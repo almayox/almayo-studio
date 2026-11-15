@@ -69,7 +69,7 @@ function toneClass(tone: SummaryTone) {
   }
 }
 
-/** Shared single-line control (42px) — see globals.css `.control` */
+/** Shared single-line control (42px). See globals.css `.control`. */
 export const controlClass = "control w-full";
 
 export const fieldClass = controlClass;

@@ -17,6 +17,7 @@ import {
   ActionGroup,
 } from "@/components/ui/PageChrome";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { filterBySearch, ListFilters } from "@/components/ui/ListFilters";
 import { Copy, Pencil, PenLine, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -428,33 +429,29 @@ export function ContractsManager({
           </label>
           <label className={labelClass}>
             Client
-            <select
+            <SearchSelect
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">Select client</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+              onChange={setClientId}
+              placeholder="Search clients…"
+              emptyLabel="Select client"
+              options={clients.map((client) => ({
+                value: client.id,
+                label: client.name,
+              }))}
+            />
           </label>
           <label className={labelClass}>
             Project (optional)
-            <select
+            <SearchSelect
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">No project</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
+              onChange={setProjectId}
+              placeholder="Search projects…"
+              emptyLabel="No project"
+              options={projects.map((project) => ({
+                value: project.id,
+                label: project.title,
+              }))}
+            />
           </label>
           <label className={labelClass}>
             Terms (English)
