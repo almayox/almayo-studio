@@ -12,6 +12,7 @@ import {
   primaryBtnClass,
 } from "@/components/ui/PageChrome";
 import type { AboutContent } from "@/lib/types";
+import { StorageImage } from "@/components/StorageMedia";
 
 type ServiceDraft = { title: string; description: string };
 type ExperienceDraft = {
@@ -343,8 +344,7 @@ export function AboutSettings({ about }: { about: AboutContent }) {
         error={errors.profile ?? null}
       >
         {profileUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <StorageImage
             src={profileUrl}
             alt="Profile"
             className="h-24 w-24 rounded-2xl object-cover ring-1 ring-mist"

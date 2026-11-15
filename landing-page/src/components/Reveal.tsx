@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 
 const reveal = {
   hidden: { opacity: 0, y: 28 },
@@ -12,6 +12,25 @@ const reveal = {
   },
 };
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void) {
+  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+// Reads the same media query as framer-motion's useReducedMotion, but through
+// useSyncExternalStore so the server-rendered markup (animated variant) hydrates
+// cleanly before switching to the static variant.
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false,
+  );
+}
+
 export function Reveal({
   children,
   className,
@@ -21,6 +40,9 @@ export function Reveal({
   className?: string;
   delay?: number;
 }) {
+  const reduceMotion = usePrefersReducedMotion();
+  if (reduceMotion) return <div className={className}>{children}</div>;
+
   return (
     <motion.div
       className={className}
@@ -47,6 +69,9 @@ export function RevealStagger({
   children: ReactNode;
   className?: string;
 }) {
+  const reduceMotion = usePrefersReducedMotion();
+  if (reduceMotion) return <div className={className}>{children}</div>;
+
   return (
     <motion.div
       className={className}
@@ -67,6 +92,9 @@ export function RevealItem({
   children: ReactNode;
   className?: string;
 }) {
+  const reduceMotion = usePrefersReducedMotion();
+  if (reduceMotion) return <div className={className}>{children}</div>;
+
   return (
     <motion.div className={className} variants={reveal}>
       {children}

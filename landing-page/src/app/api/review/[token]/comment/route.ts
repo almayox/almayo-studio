@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { checkRateLimit, clientIp } from "@/lib/rateLimit";
+import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rateLimit";
 import { assertReviewAccess } from "@/lib/reviewAccess";
 import { getReviewCampaignByToken } from "@/lib/reviewServer";
 
@@ -33,14 +33,13 @@ export async function POST(
     return NextResponse.json({ message: "Review is closed." }, { status: 409 });
   }
 
-  const body = (await request.json()) as {
-    assetId?: string;
-    author_name?: string;
-    body?: string;
-  };
-  const assetId = body.assetId?.trim();
-  const author_name = body.author_name?.trim() ?? "";
-  const commentBody = body.body?.trim() ?? "";
+  const body = await readJsonObject(request);
+  if (!body) {
+    return NextResponse.json({ message: "Invalid request." }, { status: 400 });
+  }
+  const assetId = stringField(body.assetId, 64);
+  const author_name = stringField(body.author_name, 120);
+  const commentBody = typeof body.body === "string" ? body.body.trim() : "";
 
   if (!assetId || !author_name || commentBody.length < 2) {
     return NextResponse.json({ message: "Name and comment are required." }, { status: 400 });

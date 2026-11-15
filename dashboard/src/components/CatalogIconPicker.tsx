@@ -7,6 +7,7 @@ import {
   isCatalogIconUrl,
   resolveCatalogIcon,
 } from "@/lib/catalogIcons";
+import { StorageImage } from "@/components/StorageMedia";
 
 type Props = {
   value: string;
@@ -49,9 +50,10 @@ export function CatalogIconPicker({ value, onChange }: Props) {
       <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-navy/5 text-navy">
           {hasCustomImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={value} alt="" className="h-7 w-7 object-contain" />
+            <StorageImage src={value} alt="" className="h-7 w-7 object-contain" />
           ) : (
+            // Looked up from a fixed icon map, not created here.
+            // eslint-disable-next-line react-hooks/static-components
             <SelectedIcon className="h-6 w-6" aria-hidden />
           )}
         </div>

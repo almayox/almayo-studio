@@ -26,6 +26,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import { hashPassword } from "@/lib/password";
 import { StorageImage, StorageVideo } from "@/components/StorageMedia";
+import { publicSiteUrl } from "@/lib/siteUrl";
 import type {
   Campaign,
   CampaignAsset,
@@ -47,14 +48,6 @@ type CampaignRow = Campaign & {
 
 function token() {
   return crypto.randomUUID().replace(/-/g, "") + Math.random().toString(36).slice(2, 8);
-}
-
-function siteOrigin() {
-  if (typeof window === "undefined") return "";
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    window.location.origin.replace(":3001", ":3000").replace("3001", "3000")
-  );
 }
 
 export function CampaignsManager({
@@ -118,17 +111,17 @@ export function CampaignsManager({
     [initialCampaigns, selectedCampaign],
   );
 
-  useEffect(() => {
-    if (!campaign) {
-      setExpiryDraft("");
-      return;
-    }
+  // Keep the expiry draft in sync with the selected campaign (also after a
+  // refresh delivers new data). Adjusted during render instead of in an effect.
+  const [expirySource, setExpirySource] = useState<CampaignRow | null>(campaign);
+  if (expirySource !== campaign) {
+    setExpirySource(campaign);
     setExpiryDraft(
-      campaign.review_token_expires_at
+      campaign?.review_token_expires_at
         ? campaign.review_token_expires_at.slice(0, 10)
         : "",
     );
-  }, [campaign]);
+  }
 
   const selectedAsset = useMemo(
     () => campaign?.campaign_assets?.find((a) => a.id === selectedAssetId) || null,
@@ -159,6 +152,13 @@ export function CampaignsManager({
     (n, a) => n + (a.campaign_comments?.length ?? 0),
     0,
   );
+
+  /** Shows a Supabase error in the page notice; returns true when there was one. */
+  function failed(err: { message: string } | null | undefined) {
+    if (!err) return false;
+    setError(err.message);
+    return true;
+  }
 
   function resetForm() {
     setEditingId(null);
@@ -223,10 +223,15 @@ export function CampaignsManager({
         return;
       }
       if (reviewPassword.trim()) {
-        await supabase
+        const { error: passwordError } = await supabase
           .from("campaigns")
           .update({ review_password_hash: await hashPassword(reviewPassword.trim()) })
           .eq("id", editingId);
+        if (passwordError) {
+          setError(`Details saved, but the review password was not: ${passwordError.message}`);
+          setSaving(false);
+          return;
+        }
       }
     } else {
       const review_password_hash = reviewPassword.trim()
@@ -260,8 +265,13 @@ export function CampaignsManager({
   }
 
   async function updateStatus(id: string, status: string) {
+    setError(null);
     const supabase = createClient();
-    await supabase.from("campaigns").update({ status }).eq("id", id);
+    const { error: updateError } = await supabase
+      .from("campaigns")
+      .update({ status })
+      .eq("id", id);
+    if (failed(updateError)) return;
     router.refresh();
   }
 
@@ -286,18 +296,33 @@ export function CampaignsManager({
 
   async function remove(id: string) {
     if (!window.confirm("Delete this campaign?")) return;
+    setError(null);
     const supabase = createClient();
-    const { data: assets } = await supabase
+    const { data: assets, error: assetsError } = await supabase
       .from("campaign_assets")
       .select("id")
       .eq("campaign_id", id);
+    if (failed(assetsError)) return;
     const assetIds = (assets || []).map((a) => a.id);
     if (assetIds.length) {
-      await supabase.from("campaign_asset_slides").delete().in("asset_id", assetIds);
-      await supabase.from("campaign_comments").delete().in("asset_id", assetIds);
+      const { error: slidesError } = await supabase
+        .from("campaign_asset_slides")
+        .delete()
+        .in("asset_id", assetIds);
+      if (failed(slidesError)) return;
+      const { error: commentsError } = await supabase
+        .from("campaign_comments")
+        .delete()
+        .in("asset_id", assetIds);
+      if (failed(commentsError)) return;
     }
-    await supabase.from("campaign_assets").delete().eq("campaign_id", id);
-    await supabase.from("campaigns").delete().eq("id", id);
+    const { error: assetDeleteError } = await supabase
+      .from("campaign_assets")
+      .delete()
+      .eq("campaign_id", id);
+    if (failed(assetDeleteError)) return;
+    const { error: deleteError } = await supabase.from("campaigns").delete().eq("id", id);
+    if (failed(deleteError)) return;
     if (selectedCampaign === id) {
       setSelectedCampaign(null);
       setSelectedAssetId(null);
@@ -307,12 +332,17 @@ export function CampaignsManager({
   }
 
   function reviewUrl(reviewToken: string) {
-    return `${siteOrigin()}/review/${reviewToken}`;
+    return `${publicSiteUrl()}/review/${reviewToken}`;
   }
 
-  function copyLink(reviewToken: string) {
+  async function copyLink(reviewToken: string) {
     const link = reviewUrl(reviewToken);
-    void navigator.clipboard.writeText(link);
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      setError(`Could not copy automatically. Review link: ${link}`);
+      return;
+    }
     setCopied(reviewToken);
     setTimeout(() => setCopied(null), 1500);
   }
@@ -320,28 +350,33 @@ export function CampaignsManager({
   async function regenerateReviewToken() {
     if (!campaign) return;
     if (!window.confirm("Regenerate review link? The old link will stop working.")) return;
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("campaigns")
       .update({ review_token: token() })
       .eq("id", campaign.id);
+    if (failed(updateError)) return;
     router.refresh();
   }
 
   async function clearPassword() {
     if (!campaign) return;
     if (!window.confirm("Remove review password?")) return;
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("campaigns")
       .update({ review_password_hash: null })
       .eq("id", campaign.id);
+    if (failed(updateError)) return;
     setPasswordDraft("");
     router.refresh();
   }
 
   async function saveExpiry() {
     if (!campaign) return;
+    setError(null);
     const supabase = createClient();
     const review_token_expires_at = expiryDraft
       ? new Date(`${expiryDraft}T23:59:59`).toISOString()
@@ -366,8 +401,9 @@ export function CampaignsManager({
     ) {
       return;
     }
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: campaignError } = await supabase
       .from("campaigns")
       .update({
         client_decision: null,
@@ -376,20 +412,30 @@ export function CampaignsManager({
         status: "review",
       })
       .eq("id", campaign.id);
-    await supabase
+    if (failed(campaignError)) return;
+    const { error: assetsError } = await supabase
       .from("campaign_assets")
       .update({ approval_status: "pending" })
       .eq("campaign_id", campaign.id);
+    if (assetsError) {
+      setError(
+        `Sign-off was cleared, but assets could not be reset to pending: ${assetsError.message}`,
+      );
+      router.refresh();
+      return;
+    }
     router.refresh();
   }
 
   async function publishCampaign() {
     if (!campaign) return;
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("campaigns")
       .update({ published_at: new Date().toISOString(), status: "approved" })
       .eq("id", campaign.id);
+    if (failed(updateError)) return;
     router.refresh();
   }
 
@@ -403,6 +449,7 @@ export function CampaignsManager({
       notes: asset.notes || "",
       type: (asset.type as typeof assetEditForm.type) || "single",
     });
+    setError(null);
     setAssetEditOpen(true);
   }
 
@@ -435,17 +482,24 @@ export function CampaignsManager({
 
   async function deleteComment(commentId: string) {
     if (!window.confirm("Delete this comment?")) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.from("campaign_comments").delete().eq("id", commentId);
+    const { error: deleteError } = await supabase
+      .from("campaign_comments")
+      .delete()
+      .eq("id", commentId);
+    if (failed(deleteError)) return;
     router.refresh();
   }
 
   async function toggleReviewDisabled(row: CampaignRow) {
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("campaigns")
       .update({ review_disabled: !row.review_disabled })
       .eq("id", row.id);
+    if (failed(updateError)) return;
     router.refresh();
   }
 
@@ -474,15 +528,21 @@ export function CampaignsManager({
   }
 
   async function setAssetApproval(assetId: string, approval_status: string) {
+    setError(null);
     const supabase = createClient();
-    await supabase.from("campaign_assets").update({ approval_status }).eq("id", assetId);
+    const { error: updateError } = await supabase
+      .from("campaign_assets")
+      .update({ approval_status })
+      .eq("id", assetId);
+    if (failed(updateError)) return;
     router.refresh();
   }
 
   async function clearClientDecision() {
     if (!campaign) return;
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("campaigns")
       .update({
         client_decision: null,
@@ -490,6 +550,7 @@ export function CampaignsManager({
         client_approved_at: null,
       })
       .eq("id", campaign.id);
+    if (failed(updateError)) return;
     router.refresh();
   }
 
@@ -543,13 +604,17 @@ export function CampaignsManager({
         .single();
       if (insertError) throw insertError;
 
+      let slideWarning: string | null = null;
       if (type === "carousel" && asset) {
-        await supabase.from("campaign_asset_slides").insert({
+        const { error: slideError } = await supabase.from("campaign_asset_slides").insert({
           asset_id: asset.id,
           media_url: publicUrl,
           caption: assetCaption || null,
           sort_order: 0,
         });
+        if (slideError) {
+          slideWarning = `Asset created, but its first slide was not saved: ${slideError.message}`;
+        }
         setSelectedAssetId(asset.id);
       }
 
@@ -558,6 +623,7 @@ export function CampaignsManager({
       setAssetHashtags("");
       setAssetPublishDate("");
       setAssetNotes("");
+      if (slideWarning) setError(slideWarning);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -583,10 +649,11 @@ export function CampaignsManager({
       const nextOrder = selectedAsset.campaign_asset_slides?.length || 0;
 
       if (selectedAsset.type !== "carousel") {
-        await supabase
+        const { error: typeError } = await supabase
           .from("campaign_assets")
           .update({ type: "carousel" })
           .eq("id", selectedAsset.id);
+        if (typeError) throw typeError;
       }
 
       const { error: slideError } = await supabase.from("campaign_asset_slides").insert({
@@ -598,10 +665,13 @@ export function CampaignsManager({
       if (slideError) throw slideError;
 
       if (!selectedAsset.media_url) {
-        await supabase
+        const { error: mediaError } = await supabase
           .from("campaign_assets")
           .update({ media_url: publicUrl, thumbnail_url: publicUrl })
           .eq("id", selectedAsset.id);
+        if (mediaError) {
+          setError(`Slide added, but the asset thumbnail was not set: ${mediaError.message}`);
+        }
       }
 
       router.refresh();
@@ -615,17 +685,35 @@ export function CampaignsManager({
 
   async function removeAsset(assetId: string) {
     if (!window.confirm("Delete this asset?")) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.from("campaign_asset_slides").delete().eq("asset_id", assetId);
-    await supabase.from("campaign_comments").delete().eq("asset_id", assetId);
-    await supabase.from("campaign_assets").delete().eq("id", assetId);
+    const { error: slidesError } = await supabase
+      .from("campaign_asset_slides")
+      .delete()
+      .eq("asset_id", assetId);
+    if (failed(slidesError)) return;
+    const { error: commentsError } = await supabase
+      .from("campaign_comments")
+      .delete()
+      .eq("asset_id", assetId);
+    if (failed(commentsError)) return;
+    const { error: deleteError } = await supabase
+      .from("campaign_assets")
+      .delete()
+      .eq("id", assetId);
+    if (failed(deleteError)) return;
     if (selectedAssetId === assetId) setSelectedAssetId(null);
     router.refresh();
   }
 
   async function removeSlide(slideId: string) {
+    setError(null);
     const supabase = createClient();
-    await supabase.from("campaign_asset_slides").delete().eq("id", slideId);
+    const { error: deleteError } = await supabase
+      .from("campaign_asset_slides")
+      .delete()
+      .eq("id", slideId);
+    if (failed(deleteError)) return;
     router.refresh();
   }
 
@@ -646,6 +734,12 @@ export function CampaignsManager({
           Could not load full campaign data: {fetchError}. Run{" "}
           <code className="rounded bg-white px-1">schema_updates.sql</code> in Supabase if
           carousel slides are missing.
+        </p>
+      ) : null}
+
+      {!open && !assetEditOpen && error ? (
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
         </p>
       ) : null}
 
@@ -1288,7 +1382,7 @@ export function CampaignsManager({
         </div>
       )}
 
-      {!open && error ? (
+      {!open && !assetEditOpen && error ? (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       ) : null}
 
@@ -1367,6 +1461,9 @@ export function CampaignsManager({
               className={`${fieldClass} !h-auto min-h-[4.5rem] max-h-none py-2.5`}
             />
           </label>
+          {error ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          ) : null}
           <div className="flex gap-2 pt-1">
             <button
               type="button"

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
@@ -23,6 +24,10 @@ type Props = {
   clients?: Client[];
   project?: Project;
   media?: ProjectMedia[];
+  /** Preselect a client when opened from a client's page. */
+  initialClientId?: string;
+  /** Status of the latest contract linked to this project, if any. */
+  contractStatus?: string | null;
 };
 
 type PendingMedia = {
@@ -32,7 +37,14 @@ type PendingMedia = {
   mime_type: string | null;
 };
 
-export function ProjectForm({ catalogs, clients = [], project, media = [] }: Props) {
+export function ProjectForm({
+  catalogs,
+  clients = [],
+  project,
+  media = [],
+  initialClientId = "",
+  contractStatus = null,
+}: Props) {
   const router = useRouter();
   const isEdit = Boolean(project);
 
@@ -42,7 +54,10 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
   const [tags, setTags] = useState(project?.tags ?? "");
   const [techStack, setTechStack] = useState(project?.tech_stack ?? "");
   const [catalogId, setCatalogId] = useState(project?.catalog_id ?? "");
-  const [clientId, setClientId] = useState(project?.client_id ?? "");
+  const [clientId, setClientId] = useState(project?.client_id ?? initialClientId);
+  const [contractRequired, setContractRequired] = useState(
+    project?.contract_required ?? false,
+  );
   const [thumbnailUrl, setThumbnailUrl] = useState(project?.thumbnail_url ?? "");
   const [thumbnailPosition, setThumbnailPosition] = useState(
     project?.thumbnail_position ?? "50% 50%",
@@ -179,8 +194,12 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    setLoading(true);
     setError(null);
+    if (!clientId) {
+      setError("Choose the client this project belongs to. Add the client first if it is new.");
+      return;
+    }
+    setLoading(true);
 
     try {
       const supabase = createClient();
@@ -191,7 +210,8 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
         tags: tags || null,
         tech_stack: techStack || null,
         catalog_id: catalogId || null,
-        client_id: clientId || null,
+        client_id: clientId,
+        contract_required: contractRequired,
         thumbnail_url: thumbnailUrl || null,
         thumbnail_position: thumbnailPosition || "50% 50%",
         is_visible: isVisible,
@@ -291,18 +311,70 @@ export function ProjectForm({ catalogs, clients = [], project, media = [] }: Pro
         </label>
 
         <label className="block text-sm font-medium text-navy">
-          Client
+          Client <span className="text-red-600">*</span>
           <SearchSelect
             value={clientId}
             onChange={setClientId}
             placeholder="Search clients…"
-            emptyLabel="No client"
+            emptyLabel="Choose a client"
             options={(clients || []).map((client) => ({
               value: client.id,
               label: client.name,
             }))}
           />
+          {clients.length === 0 ? (
+            <span className="mt-1.5 block text-xs font-normal text-navy/60">
+              No clients yet.{" "}
+              <Link href="/clients" className="font-medium text-navy underline">
+                Add a client
+              </Link>{" "}
+              first.
+            </span>
+          ) : null}
         </label>
+
+        <div className="rounded-xl border border-mist bg-foam/60 p-4 sm:col-span-2">
+          <label className="flex items-start gap-3 text-sm font-medium text-navy">
+            <input
+              type="checkbox"
+              checked={contractRequired}
+              onChange={(e) => setContractRequired(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-mist"
+            />
+            <span>
+              This project needs a contract
+              <span className="block text-xs font-normal text-navy/60">
+                Internal only, never shown on the public site. Leave off for work done without
+                a contract.
+              </span>
+            </span>
+          </label>
+          {contractRequired ? (
+            <p className="mt-3 flex flex-wrap items-center gap-2 pl-7 text-xs text-navy/70">
+              <span
+                className={`rounded-full px-2.5 py-1 font-medium ${
+                  contractStatus === "signed"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : contractStatus
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-red-50 text-red-700"
+                }`}
+              >
+                {contractStatus ? `Contract: ${contractStatus}` : "No contract yet"}
+              </span>
+              {project?.id ? (
+                <Link
+                  href={`/contracts?project=${project.id}&client=${clientId}${contractStatus ? "" : "&new=1"}`}
+                  className="font-medium text-navy underline"
+                >
+                  {contractStatus ? "Open contracts" : "Create contract"}
+                </Link>
+              ) : (
+                <span>Save the project, then create its contract.</span>
+              )}
+            </p>
+          ) : null}
+        </div>
 
         <label className="block text-sm font-medium text-navy sm:col-span-2">
           Description

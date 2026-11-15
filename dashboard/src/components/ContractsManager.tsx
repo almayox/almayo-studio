@@ -22,6 +22,7 @@ import { filterBySearch, ListFilters } from "@/components/ui/ListFilters";
 import { Copy, Pencil, PenLine, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { buildSignerDeviceInfo, clientSignerPayload } from "@/lib/deviceFingerprint";
+import { publicSiteUrl } from "@/lib/siteUrl";
 import type { Client, Contract, ContractMilestone, Project } from "@/lib/types";
 
 type ContractRow = Contract & {
@@ -54,29 +55,27 @@ function emptyMilestone(currency = "KWD"): MilestoneDraft {
   };
 }
 
-function siteOrigin() {
-  if (typeof window === "undefined") return "";
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    window.location.origin.replace(":3001", ":3000").replace("3001", "3000")
-  );
-}
-
 export function ContractsManager({
   initialContracts,
   clients,
   projects,
+  prefill,
 }: {
   initialContracts: ContractRow[];
   clients: Client[];
   projects: Project[];
+  /** Opened from a project: start a new contract for that client and project. */
+  prefill?: { clientId: string; projectId: string; open: boolean };
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(prefill?.open));
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [title, setTitle] = useState(() => {
+    const project = prefill?.open ? projects.find((p) => p.id === prefill.projectId) : null;
+    return project ? `${project.title} contract` : "";
+  });
+  const [clientId, setClientId] = useState(prefill?.clientId ?? "");
+  const [projectId, setProjectId] = useState(prefill?.projectId ?? "");
   const [terms, setTerms] = useState("");
   const [termsAr, setTermsAr] = useState("");
   const [milestones, setMilestones] = useState<MilestoneDraft[]>([emptyMilestone()]);
@@ -163,6 +162,7 @@ export function ContractsManager({
     };
 
     let contractId = editingId;
+    let oldMilestoneIds: string[] = [];
 
     if (editingId) {
       const { error: updateError } = await supabase
@@ -174,7 +174,18 @@ export function ContractsManager({
         setSaving(false);
         return;
       }
-      await supabase.from("contract_milestones").delete().eq("contract_id", editingId);
+      // Remember the current milestones; they are only removed after the
+      // replacement rows are safely inserted.
+      const { data: oldMilestones, error: oldMilestonesError } = await supabase
+        .from("contract_milestones")
+        .select("id")
+        .eq("contract_id", editingId);
+      if (oldMilestonesError) {
+        setError(oldMilestonesError.message);
+        setSaving(false);
+        return;
+      }
+      oldMilestoneIds = (oldMilestones || []).map((m) => m.id as string);
     } else {
       const { data: contract, error: contractError } = await supabase
         .from("contracts")
@@ -215,29 +226,70 @@ export function ContractsManager({
       }
     }
 
+    if (oldMilestoneIds.length) {
+      const { error: deleteError } = await supabase
+        .from("contract_milestones")
+        .delete()
+        .in("id", oldMilestoneIds);
+      if (deleteError) {
+        setError(
+          `Contract saved, but the previous milestones could not be removed: ${deleteError.message}. Save again to retry.`,
+        );
+        setSaving(false);
+        router.refresh();
+        return;
+      }
+    }
+
     setSaving(false);
     close();
     router.refresh();
   }
 
   async function updateStatus(id: string, status: string) {
+    setError(null);
     const supabase = createClient();
-    await supabase.from("contracts").update({ status }).eq("id", id);
+    const { error: updateError } = await supabase
+      .from("contracts")
+      .update({ status })
+      .eq("id", id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     router.refresh();
   }
 
   async function remove(id: string) {
     if (!window.confirm("Delete this contract?")) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.from("contract_milestones").delete().eq("contract_id", id);
-    await supabase.from("contracts").delete().eq("id", id);
+    const { error: milestoneError } = await supabase
+      .from("contract_milestones")
+      .delete()
+      .eq("contract_id", id);
+    if (milestoneError) {
+      setError(milestoneError.message);
+      return;
+    }
+    const { error: deleteError } = await supabase.from("contracts").delete().eq("id", id);
+    if (deleteError) {
+      setError(deleteError.message);
+      router.refresh();
+      return;
+    }
     if (editingId === id) close();
     router.refresh();
   }
 
-  function copyLink(contractToken: string) {
-    const link = `${siteOrigin()}/contract/${contractToken}`;
-    void navigator.clipboard.writeText(link);
+  async function copyLink(contractToken: string) {
+    const link = `${publicSiteUrl()}/contract/${contractToken}`;
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      setError(`Could not copy automatically. Sign link: ${link}`);
+      return;
+    }
     setCopied(contractToken);
     setTimeout(() => setCopied(null), 1500);
   }
@@ -248,6 +300,7 @@ export function ContractsManager({
       contract.developer_signed_name || "Almayo Yahya Ibrahim",
     );
     if (!name?.trim()) return;
+    setError(null);
     const supabase = createClient();
     const ua = navigator.userAgent;
     const deviceInfo = buildSignerDeviceInfo(null, ua, clientSignerPayload());
@@ -298,6 +351,10 @@ export function ContractsManager({
           },
         ]}
       />
+
+      {error && !open ? (
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      ) : null}
 
       <ListFilters
         search={search}

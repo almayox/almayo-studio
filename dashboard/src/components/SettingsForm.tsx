@@ -11,6 +11,7 @@ import {
   primaryBtnClass,
 } from "@/components/ui/PageChrome";
 import type { AboutContent, ContactDetails, SiteSettings } from "@/lib/types";
+import { StorageImage } from "@/components/StorageMedia";
 
 export type SettingsTabId =
   | "general"
@@ -458,14 +459,13 @@ export function SettingsForm({
         <div className="rounded-lg border border-mist bg-foam/40 p-4">
           <p className="text-sm font-medium text-navy">Favicon</p>
           {faviconUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={faviconUrl} alt="Favicon" className="mt-2 h-10 w-10 object-contain" />
+            <StorageImage src={faviconUrl} alt="Favicon" className="mt-2 h-10 w-10 object-contain" />
           ) : (
             <p className="mt-1 text-xs text-navy/50">No favicon yet</p>
           )}
           <DropUpload
             onFiles={uploadFavicon}
-            accept="image/png,image/jpeg,image/webp,image/x-icon,image/svg+xml"
+            accept="image/png,image/jpeg,image/webp,image/x-icon"
             disabled={faviconBusy}
             className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-3 py-5 text-center text-sm text-navy/70"
           >

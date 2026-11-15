@@ -15,6 +15,20 @@ export default async function ProjectsPage() {
     .order("created_at", { ascending: false });
 
   const projects = (data as Project[]) ?? [];
+
+  const [{ data: clientRows }, { data: contractRows }] = await Promise.all([
+    supabase.from("clients").select("id, name"),
+    supabase.from("contracts").select("project_id, status, created_at").order("created_at"),
+  ]);
+  const clientNames: Record<string, string> = {};
+  for (const row of clientRows ?? []) clientNames[row.id] = row.name;
+  // Latest contract per project; a signed one always wins.
+  const contractStatus: Record<string, string> = {};
+  for (const row of contractRows ?? []) {
+    if (!row.project_id) continue;
+    if (contractStatus[row.project_id] === "signed") continue;
+    contractStatus[row.project_id] = row.status;
+  }
   const visibleCount = projects.filter((p) => p.is_visible).length;
   const featuredCount = projects.filter((p) => p.is_featured).length;
 
@@ -41,7 +55,11 @@ export default async function ProjectsPage() {
       {projects.length === 0 ? (
         <EmptyState message="No projects yet. Create your first one." />
       ) : (
-        <ProjectsTable projects={projects} />
+        <ProjectsTable
+          projects={projects}
+          clientNames={clientNames}
+          contractStatus={contractStatus}
+        />
       )}
     </div>
   );

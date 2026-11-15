@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getContractByToken } from "@/lib/contractServer";
+import { sanitizeRichText } from "@/lib/sanitize";
 import { hasSupabaseEnv } from "@/lib/supabase/server";
 import { ContractSignForm } from "./ContractSignForm";
 
@@ -27,15 +28,13 @@ export default async function ContractPage({ params }: Props) {
       <ContractSignForm
         token={token}
         title={contract.title}
-        terms={contract.terms}
-        termsAr={contract.terms_ar}
+        terms={sanitizeRichText(contract.terms)}
+        termsAr={contract.terms_ar ? sanitizeRichText(contract.terms_ar) : contract.terms_ar}
         milestones={milestones}
         alreadySigned={contract.status === "signed"}
         signedByName={contract.signed_by_name}
         developerSignedName={contract.developer_signed_name}
         developerSignedAt={contract.developer_signed_at}
-        signerIp={contract.signer_ip}
-        signerDeviceInfo={contract.signer_device_info}
       />
     </div>
   );

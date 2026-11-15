@@ -3,11 +3,16 @@ import * as tus from "tus-js-client";
 import { validateUploadBasics } from "@/lib/fileScan";
 import { toStoredStorageUrl } from "@/lib/storage";
 
-const IMAGE_MAX_EDGE = 1920;
+// Large enough for a full-width image on a high-density screen.
+const IMAGE_MAX_EDGE = 2400;
 const LOGO_MAX_EDGE = 512;
-const IMAGE_QUALITY = 0.82;
-const LOGO_QUALITY = 0.88;
-const RESUMABLE_THRESHOLD = 6 * 1024 * 1024;
+// Visually lossless for photos and artwork; the public site then serves
+// right-sized AVIF/WebP versions of this master through its image optimiser.
+const IMAGE_QUALITY = 0.9;
+const LOGO_QUALITY = 0.92;
+// Vercel rejects request bodies over 4.5 MB, so anything near that goes
+// straight to storage with a resumable upload instead of through /api/upload.
+const RESUMABLE_THRESHOLD = 4 * 1024 * 1024;
 const CHUNK_SIZE = 6 * 1024 * 1024;
 const API_MAX_BYTES = 25 * 1024 * 1024;
 
@@ -74,8 +79,17 @@ async function uploadViaApi(
   form.append("bucket", bucket);
   form.append("folder", folder);
   const res = await fetch("/api/upload", { method: "POST", body: form });
-  const data = (await res.json()) as { url?: string; message?: string };
-  if (!res.ok) throw new Error(data.message || "Upload failed");
+  const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+  if (!res.ok) {
+    throw new Error(
+      data.message ||
+        (res.status === 413
+          ? "File is too large to upload this way."
+          : res.status === 401
+            ? "Your session expired. Sign in again."
+            : `Upload failed (${res.status}).`),
+    );
+  }
   if (!data.url) throw new Error("Upload failed");
   return data.url;
 }
@@ -123,7 +137,7 @@ async function uploadResumable(
         bucketName: bucket,
         objectName: path,
         contentType: file.type || "application/octet-stream",
-        cacheControl: "3600",
+        cacheControl: "31536000",
       },
       onError: (error) => reject(error),
       onProgress: (bytesUploaded, bytesTotal) => {
@@ -174,9 +188,15 @@ export async function uploadStudioFile(
   const quality = options.imageQuality ?? (maxEdge <= LOGO_MAX_EDGE ? LOGO_QUALITY : IMAGE_QUALITY);
   const shouldCompress = optimize && file.type.startsWith("image/");
   if (shouldCompress) options.onPhase?.("compressing");
-  const prepared = shouldCompress
-    ? await compressImage(file, maxEdge, quality)
-    : file;
+  let prepared = file;
+  if (shouldCompress) {
+    try {
+      prepared = await compressImage(file, maxEdge, quality);
+    } catch {
+      // Formats the browser cannot decode (e.g. HEIC) are uploaded untouched.
+      prepared = file;
+    }
+  }
 
   const basics = validateUploadBasics(prepared, API_MAX_BYTES);
   if (!basics.ok) throw new Error(basics.reason);

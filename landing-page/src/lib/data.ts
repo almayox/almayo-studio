@@ -1,5 +1,5 @@
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/server";
-import { signStorageUrl } from "@/lib/storage";
+import { publicAssetUrl, signStorageUrl } from "@/lib/storage";
 import type {
   AboutContent,
   Catalog,
@@ -18,6 +18,14 @@ import {
   FALLBACK_SETTINGS,
 } from "@/lib/content";
 
+// Visitors can only read these columns (see supabase/schema_launch_2_after_deploy.sql).
+// Client contact details and internal project flags are never requested here.
+const CLIENT_COLUMNS =
+  "id, name, slug, logo_url, website_url, description, work_types, is_visible, sort_order";
+const PROJECT_COLUMNS =
+  "id, catalog_id, client_id, title, slug, description, tech_stack, tags, thumbnail_url, thumbnail_position, is_featured, is_visible, sort_order, created_at, updated_at";
+const PROJECT_SELECT = `${PROJECT_COLUMNS}, catalogs(id, name, slug), clients(name, slug)`;
+
 export type LogoVariant = {
   id: string;
   variant_type: string;
@@ -28,7 +36,7 @@ async function signProject<T extends { thumbnail_url?: string | null }>(project:
   return {
     ...project,
     thumbnail_url: project.thumbnail_url
-      ? await signStorageUrl(project.thumbnail_url)
+      ? await publicAssetUrl(project.thumbnail_url)
       : project.thumbnail_url,
   };
 }
@@ -36,7 +44,7 @@ async function signProject<T extends { thumbnail_url?: string | null }>(project:
 async function signClient<T extends { logo_url?: string | null }>(client: T) {
   return {
     ...client,
-    logo_url: client.logo_url ? await signStorageUrl(client.logo_url) : client.logo_url,
+    logo_url: client.logo_url ? await publicAssetUrl(client.logo_url) : client.logo_url,
   };
 }
 
@@ -56,7 +64,7 @@ async function signAbout(about: AboutContent) {
   return {
     ...about,
     profile_photo_url: about.profile_photo_url
-      ? await signStorageUrl(about.profile_photo_url)
+      ? await publicAssetUrl(about.profile_photo_url)
       : about.profile_photo_url,
   };
 }
@@ -103,7 +111,7 @@ export async function getLogoVariants(): Promise<LogoVariant[]> {
   return Promise.all(
     logos.map(async (logo) => ({
       ...logo,
-      url: logo.url ? await signStorageUrl(logo.url) : logo.url,
+      url: logo.url ? await publicAssetUrl(logo.url) : logo.url,
     })),
   );
 }
@@ -131,7 +139,7 @@ export async function getCatalogs(): Promise<Catalog[]> {
       ...catalog,
       icon:
         catalog.icon && catalog.icon.startsWith("http")
-          ? (await signStorageUrl(catalog.icon)) || catalog.icon
+          ? (await publicAssetUrl(catalog.icon)) || catalog.icon
           : catalog.icon,
     })),
   );
@@ -142,11 +150,11 @@ export async function getClients(): Promise<Client[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("clients")
-    .select("*")
+    .select(CLIENT_COLUMNS)
     .eq("is_visible", true)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
-  const clients = (data as Client[]) ?? [];
+  const clients = (data as unknown as Client[]) ?? [];
   return Promise.all(clients.map(signClient));
 }
 
@@ -158,7 +166,7 @@ export async function getClientBySlug(slug: string): Promise<{
   const supabase = await createClient();
   const { data: client } = await supabase
     .from("clients")
-    .select("*")
+    .select(CLIENT_COLUMNS)
     .eq("slug", slug)
     .eq("is_visible", true)
     .maybeSingle();
@@ -166,14 +174,14 @@ export async function getClientBySlug(slug: string): Promise<{
 
   const { data: projects } = await supabase
     .from("projects")
-    .select("*, catalogs(id, name, slug)")
-    .eq("client_id", (client as Client).id)
+    .select(PROJECT_SELECT)
+    .eq("client_id", (client as unknown as Client).id)
     .eq("is_visible", true)
     .order("sort_order", { ascending: true });
 
   return {
-    client: await signClient(client as Client),
-    projects: await Promise.all(((projects as ProjectWithCatalog[]) ?? []).map(signProject)),
+    client: await signClient(client as unknown as Client),
+    projects: await Promise.all(((projects as unknown as ProjectWithCatalog[]) ?? []).map(signProject)),
   };
 }
 
@@ -201,7 +209,7 @@ export async function getProjects(options?: {
   const supabase = await createClient();
   let query = supabase
     .from("projects")
-    .select("*, catalogs(id, name, slug)")
+    .select(PROJECT_SELECT)
     .eq("is_visible", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
@@ -211,7 +219,7 @@ export async function getProjects(options?: {
   }
 
   const { data } = await query;
-  return Promise.all(((data as ProjectWithCatalog[]) ?? []).map(signProject));
+  return Promise.all(((data as unknown as ProjectWithCatalog[]) ?? []).map(signProject));
 }
 
 export async function getCatalogBySlug(slug: string): Promise<{
@@ -230,7 +238,7 @@ export async function getCatalogBySlug(slug: string): Promise<{
 
   const { data: projects } = await supabase
     .from("projects")
-    .select("*, catalogs(id, name, slug)")
+    .select(PROJECT_SELECT)
     .eq("catalog_id", (catalog as Catalog).id)
     .eq("is_visible", true)
     .order("sort_order", { ascending: true })
@@ -240,13 +248,13 @@ export async function getCatalogBySlug(slug: string): Promise<{
     ...(catalog as Catalog),
     icon:
       catalog.icon && catalog.icon.startsWith("http")
-        ? (await signStorageUrl(catalog.icon)) || catalog.icon
+        ? (await publicAssetUrl(catalog.icon)) || catalog.icon
         : catalog.icon,
   };
 
   return {
     catalog: signedCatalog,
-    projects: await Promise.all(((projects as ProjectWithCatalog[]) ?? []).map(signProject)),
+    projects: await Promise.all(((projects as unknown as ProjectWithCatalog[]) ?? []).map(signProject)),
   };
 }
 
@@ -258,7 +266,7 @@ export async function getProjectBySlug(slug: string): Promise<{
   const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
-    .select("*, catalogs(id, name, slug)")
+    .select(PROJECT_SELECT)
     .eq("slug", slug)
     .eq("is_visible", true)
     .maybeSingle();
@@ -268,18 +276,18 @@ export async function getProjectBySlug(slug: string): Promise<{
   const { data: media } = await supabase
     .from("project_media")
     .select("*")
-    .eq("project_id", (project as Project).id)
+    .eq("project_id", (project as unknown as Project).id)
     .order("sort_order", { ascending: true });
 
   const signedMedia = await Promise.all(
     ((media as ProjectMedia[]) ?? []).map(async (item) => ({
       ...item,
-      url: (await signStorageUrl(item.url)) || item.url,
+      url: (await publicAssetUrl(item.url)) || item.url,
     })),
   );
 
   return {
-    project: await signProject(project as ProjectWithCatalog),
+    project: await signProject(project as unknown as ProjectWithCatalog),
     media: signedMedia,
   };
 }

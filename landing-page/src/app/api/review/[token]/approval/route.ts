@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { checkRateLimit, clientIp } from "@/lib/rateLimit";
+import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rateLimit";
 import { assertReviewAccess } from "@/lib/reviewAccess";
 import { getReviewCampaignByToken } from "@/lib/reviewServer";
 
@@ -35,9 +35,9 @@ export async function POST(
     return NextResponse.json({ message: "Review is closed." }, { status: 409 });
   }
 
-  const body = (await request.json()) as { assetId?: string; approval_status?: string };
-  const assetId = body.assetId?.trim();
-  const approval_status = body.approval_status?.trim();
+  const body = await readJsonObject(request);
+  const assetId = stringField(body?.assetId, 64);
+  const approval_status = stringField(body?.approval_status, 40);
   if (!assetId || !approval_status || !ALLOWED.has(approval_status)) {
     return NextResponse.json({ message: "Invalid request." }, { status: 400 });
   }
@@ -57,7 +57,8 @@ export async function POST(
   const { error } = await supabase
     .from("campaign_assets")
     .update({ approval_status })
-    .eq("id", assetId);
+    .eq("id", assetId)
+    .eq("campaign_id", campaign.id);
 
   if (error) {
     return NextResponse.json({ message: "Could not update asset." }, { status: 500 });

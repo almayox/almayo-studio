@@ -56,23 +56,32 @@ export function buildSignerDeviceInfo(
   client: SignerDevicePayload,
 ) {
   const parsed = parseUserAgent(ua);
+  const str = (value: unknown) =>
+    typeof value === "string" && value.length > 0 ? value.slice(0, 100) : null;
+  const num = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0 && value < 100000
+      ? value
+      : null;
+  const bool = (value: unknown) => (typeof value === "boolean" ? value : null);
   return JSON.stringify({
+    // Recorded by the server.
     ip,
     browser: parsed.browser,
     os: parsed.os,
     device: parsed.device,
-    timezone: client.timezone ?? null,
-    language: client.language ?? null,
-    screenResolution: client.screenResolution ?? null,
-    platform: client.platform ?? null,
-    vendor: client.vendor ?? null,
-    hardwareConcurrency: client.hardwareConcurrency ?? null,
-    deviceMemory: client.deviceMemory ?? null,
-    cookieEnabled: client.cookieEnabled ?? null,
-    pdfViewerEnabled: client.pdfViewerEnabled ?? null,
-    maxTouchPoints: client.maxTouchPoints ?? null,
-    userAgent: ua,
+    userAgent: ua.slice(0, 400),
     capturedAt: new Date().toISOString(),
+    // Reported by the signer's browser (not verifiable).
+    timezone: str(client.timezone),
+    language: str(client.language),
+    screenResolution: str(client.screenResolution),
+    platform: str(client.platform),
+    vendor: str(client.vendor),
+    hardwareConcurrency: num(client.hardwareConcurrency),
+    deviceMemory: num(client.deviceMemory),
+    cookieEnabled: bool(client.cookieEnabled),
+    pdfViewerEnabled: bool(client.pdfViewerEnabled),
+    maxTouchPoints: num(client.maxTouchPoints),
   });
 }
 

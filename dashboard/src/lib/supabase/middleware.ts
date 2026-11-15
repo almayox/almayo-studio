@@ -1,34 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
-function allowedEmailsFromEnv() {
-  return (process.env.ADMIN_ALLOWED_EMAILS || "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-async function isAllowedAdmin(
-  supabase: ReturnType<typeof createServerClient>,
-  email: string,
-) {
-  const envList = allowedEmailsFromEnv();
-  if (envList.length > 0) {
-    return envList.includes(email.toLowerCase());
-  }
-
-  const { count } = await supabase
-    .from("admin_allowlist")
-    .select("*", { count: "exact", head: true });
-  if (!count) return true;
-
-  const { data } = await supabase
-    .from("admin_allowlist")
-    .select("email")
-    .ilike("email", email)
-    .maybeSingle();
-  return Boolean(data);
-}
+import { isAllowedAdmin } from "@/lib/adminAccess";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -72,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isLogin) {
-    const allowed = await isAllowedAdmin(supabase, user.email || "");
+    const allowed = await isAllowedAdmin(supabase, user.email);
     if (!allowed) {
       await supabase.auth.signOut();
       const redirectUrl = request.nextUrl.clone();

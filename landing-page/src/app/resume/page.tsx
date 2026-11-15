@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Reveal } from "@/components/Reveal";
 import { getResume, getSiteSettings } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Resume",
-  description: "Download Alemayehu Ibrahim resume.",
+  description: "Resume of Alemayehu Ibrahim, graphic designer and software engineer.",
 };
 
 export default async function ResumePage() {
   const [resume, settings] = await Promise.all([getResume(), getSiteSettings()]);
+
+  const hasResume = Boolean(resume?.file_url);
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-24 pt-32 sm:px-6">
@@ -17,10 +20,12 @@ export default async function ResumePage() {
           Resume
         </p>
         <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-navy sm:text-5xl">
-          Download CV
+          {hasResume ? "Download CV" : "My resume"}
         </h1>
         <p className="mt-4 text-navy/65">
-          Get the latest resume for {settings.site_name}.
+          {hasResume
+            ? `Get the latest resume for ${settings.site_name}.`
+            : "My experience, skills and selected work in one document."}
         </p>
       </Reveal>
 
@@ -41,7 +46,11 @@ export default async function ResumePage() {
           </>
         ) : (
           <p className="text-sm text-navy/60">
-            Resume not uploaded yet. Add it from the dashboard Settings.
+            My resume is available on request.{" "}
+            <Link href="/contact" className="font-medium text-navy underline underline-offset-4">
+              Get in touch
+            </Link>{" "}
+            and I’ll send it over.
           </p>
         )}
       </Reveal>

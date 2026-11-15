@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { SignOutButton } from "@/components/SignOutButton";
+import { publicSiteUrl } from "@/lib/siteUrl";
 
 const nav = [
   { href: "/overview", label: "Overview" },
@@ -11,6 +12,7 @@ const nav = [
   { href: "/catalogs", label: "Catalogs" },
   { href: "/clients", label: "Clients" },
   { href: "/leads", label: "Leads" },
+  { href: "/quotations", label: "Quotations" },
   { href: "/invoices", label: "Invoices" },
   { href: "/expenses", label: "Expenses" },
   { href: "/contracts", label: "Contracts" },
@@ -62,7 +64,7 @@ function SidebarNav({
           <p className="mb-2 truncate px-1 text-[11px] text-white/45">{email}</p>
         ) : null}
         <a
-          href={process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}
+          href={publicSiteUrl()}
           target="_blank"
           rel="noreferrer"
           className="mb-1 block rounded-xl px-3 py-2.5 text-sm text-white/65 transition hover:bg-white/10 hover:text-white"

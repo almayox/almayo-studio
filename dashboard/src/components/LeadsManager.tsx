@@ -186,16 +186,35 @@ export function LeadsManager({ initialLeads }: { initialLeads: Lead[] }) {
       setError(insertError.message);
       return;
     }
-    await supabase.from("leads").update({ stage: "won" }).eq("id", lead.id);
+    const { error: stageError } = await supabase
+      .from("leads")
+      .update({ stage: "won" })
+      .eq("id", lead.id);
     setMessage(`“${lead.full_name}” added to Clients (hidden).`);
+    if (stageError) {
+      setError(`Client created, but the lead could not be marked as won: ${stageError.message}`);
+    }
     router.refresh();
   }
 
   async function remove(id: string) {
     if (!window.confirm("Delete this lead?")) return;
+    setError(null);
+    setMessage(null);
     const supabase = createClient();
-    await supabase.from("leads").delete().eq("id", id);
+    const { error: deleteError } = await supabase.from("leads").delete().eq("id", id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     router.refresh();
+  }
+
+  // Quote every cell, and neutralise values a spreadsheet would run as a formula.
+  function csvCell(value: unknown) {
+    let text = String(value ?? "");
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    return `"${text.replace(/"/g, '""')}"`;
   }
 
   function exportCsv() {
@@ -218,11 +237,11 @@ export function LeadsManager({ initialLeads }: { initialLeads: Lead[] }) {
         lead.service_interested || "",
         lead.stage,
         lead.source,
-        (lead.message || "").replace(/\n/g, " "),
-        (lead.notes || "").replace(/\n/g, " "),
+        (lead.message || "").replace(/\r?\n/g, " "),
+        (lead.notes || "").replace(/\r?\n/g, " "),
         lead.created_at,
       ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .map(csvCell)
         .join(","),
     );
     const blob = new Blob([[header.join(","), ...rows].join("\n")], {

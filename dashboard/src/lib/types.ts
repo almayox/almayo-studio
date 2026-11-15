@@ -25,6 +25,8 @@ export type Project = {
   thumbnail_position: string | null;
   is_featured: boolean;
   is_visible: boolean;
+  /** Internal: whether this project needs a signed contract. */
+  contract_required?: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -99,7 +101,48 @@ export type Invoice = {
   amount_paid: string | number;
   due_date: string | null;
   notes: string | null;
+  /** Quotation this invoice was converted from, if any. */
+  quotation_id?: string | null;
+  /** Project this invoice bills, if any. */
+  project_id?: string | null;
   created_at: string;
+};
+
+export type Quotation = {
+  id: string;
+  quote_number: string;
+  client_id: string;
+  project_id: string | null;
+  client_name: string;
+  client_email: string | null;
+  client_address: string | null;
+  title: string | null;
+  currency: string;
+  /** draft | sent | accepted | declined | expired */
+  status: string;
+  subtotal: string | number;
+  discount_percent: string | number | null;
+  discount_amount: string | number | null;
+  tax_percent: string | number | null;
+  tax_label: string | null;
+  total: string | number;
+  valid_until: string | null;
+  notes: string | null;
+  /** Set once, when the quotation is converted into an invoice. */
+  converted_invoice_id: string | null;
+  converted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type QuotationItem = {
+  id: string;
+  quotation_id: string;
+  description: string;
+  quantity: string | number;
+  unit_price: string | number;
+  amount: string | number;
+  sort_order: number;
 };
 
 export type InvoiceItem = {
@@ -125,7 +168,15 @@ export type InvoicePaymentEvent = {
   created_at: string;
 };
 
+export type ClientProjectSummary = {
+  id: string;
+  title: string;
+  is_visible: boolean;
+  catalog_name: string | null;
+};
+
 export type ClientStats = Client & {
+  projects?: ClientProjectSummary[];
   project_count: number;
   contract_count: number;
   invoice_count: number;

@@ -12,12 +12,38 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [expired, setExpired] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-    void supabase.auth.getSession().then(({ data }) => {
-      setReady(Boolean(data.session));
+    let active = true;
+    let hasSession = false;
+
+    const markReady = () => {
+      if (!active) return;
+      hasSession = true;
+      setExpired(false);
+      setReady(true);
+    };
+
+    // The recovery link signs the user in asynchronously, so listen for it
+    // as well as checking for a session that already exists.
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) markReady();
     });
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) markReady();
+    });
+
+    const timer = window.setTimeout(() => {
+      if (active && !hasSession) setExpired(true);
+    }, 4000);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   async function onSubmit(event: FormEvent) {
@@ -55,7 +81,14 @@ export default function ResetPasswordPage() {
           Set new password
         </h1>
 
-        {!ready ? (
+        {!ready && expired ? (
+          <p className="mt-6 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            This reset link has expired or was opened in a different browser.{" "}
+            <Link href="/forgot-password" className="font-medium underline">
+              Request a new one.
+            </Link>
+          </p>
+        ) : !ready ? (
           <p className="mt-6 text-sm text-navy/60">
             Open this page from the email reset link. If you already did, wait a moment…
           </p>

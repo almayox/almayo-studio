@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ProjectMedia } from "@/lib/types";
+import { StorageImage, StorageVideo } from "@/components/StorageMedia";
 
 function SortableMediaItem({
   item,
@@ -47,14 +48,13 @@ function SortableMediaItem({
       aria-label="Drag image to reorder"
     >
       {item.media_type === "video" ? (
-        <video
+        <StorageVideo
           src={item.url}
           preload="none"
           className="pointer-events-none h-full w-full rounded-lg bg-foam object-cover"
         />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <StorageImage
           src={item.url}
           alt=""
           draggable={false}

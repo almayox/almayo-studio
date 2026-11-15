@@ -43,6 +43,14 @@ export default async function HomePage() {
   const projectCount = allProjects.length;
   const testimonials = parseTestimonials(settings.testimonials).slice(0, 3);
   const visibleClients = clients.slice(0, 10);
+  const stats = [
+    { value: settings.years_experience, label: "Years Experience" },
+    { value: projectCount, label: "Projects Delivered" },
+    { value: clients.length, label: "Happy Clients" },
+    { value: settings.countries_served, label: "Countries Served" },
+  ]
+    .map((stat) => ({ ...stat, value: String(stat.value ?? "").trim() }))
+    .filter((stat) => stat.value !== "" && stat.value !== "0");
 
   return (
     <>
@@ -53,29 +61,20 @@ export default async function HomePage() {
         whatsappNumber={settings.whatsapp_number}
       />
 
-      <section className="border-b border-mist bg-white">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-5 py-12 sm:grid-cols-4 sm:px-6 sm:gap-8">
-          {[
-            { value: settings.years_experience, label: "Years Experience" },
-            {
-              value: projectCount > 0 ? `${projectCount}+` : "80+",
-              label: "Projects Delivered",
-            },
-            {
-              value: clients.length > 0 ? `${clients.length}+` : "30+",
-              label: "Happy Clients",
-            },
-            { value: settings.countries_served, label: "Countries Served" },
-          ].map((stat) => (
-            <Reveal key={stat.label} className="text-center">
-              <p className="font-[family-name:var(--font-display)] text-3xl text-navy sm:text-4xl">
-                {stat.value}
-              </p>
-              <p className="mt-1 text-sm font-medium text-navy/55">{stat.label}</p>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      {stats.length >= 2 ? (
+        <section className="border-b border-mist bg-white">
+          <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-y-8 px-2 py-12 sm:px-3">
+            {stats.map((stat) => (
+              <Reveal key={stat.label} className="w-1/2 px-3 text-center sm:w-1/4">
+                <p className="font-[family-name:var(--font-display)] text-3xl text-navy sm:text-4xl">
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-sm font-medium text-navy/55">{stat.label}</p>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {skills.length > 0 ? (
         <section className="bg-foam py-16">
@@ -125,14 +124,15 @@ export default async function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-mist bg-foam px-6 py-16 text-center">
-              <p className="font-[family-name:var(--font-display)] text-xl text-navy">
-                Projects will appear here
+            <Reveal>
+              <p className="text-navy/65">
+                New work is on its way.{" "}
+                <Link href="/contact" className="font-medium text-navy underline underline-offset-4">
+                  Get in touch
+                </Link>{" "}
+                to see recent projects.
               </p>
-              <p className="mt-2 text-sm text-navy/60">
-                Publish featured projects from the dashboard.
-              </p>
-            </div>
+            </Reveal>
           )}
         </div>
       </section>

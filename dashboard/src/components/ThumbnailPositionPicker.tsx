@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { StorageImage } from "@/components/StorageMedia";
 
 export function ThumbnailPositionPicker({
   url,
@@ -55,8 +56,7 @@ export function ThumbnailPositionPicker({
           if (p) onChange(p);
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <StorageImage
           src={url}
           alt=""
           draggable={false}

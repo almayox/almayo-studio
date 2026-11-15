@@ -3,7 +3,14 @@ import { Plus_Jakarta_Sans, Source_Sans_3 } from "next/font/google";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { getLogoVariants, getSiteSettings, getSocialLinks, resolveNavbarLogos } from "@/lib/data";
+import {
+  getLogoVariants,
+  getResume,
+  getSiteSettings,
+  getSocialLinks,
+  resolveNavbarLogos,
+} from "@/lib/data";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const display = Plus_Jakarta_Sans({
@@ -21,16 +28,28 @@ const body = Source_Sans_3({
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   return {
+    metadataBase: new URL(SITE_URL),
     title: {
       default: settings.tab_title || settings.site_name,
       template: `%s · ${settings.site_name}`,
     },
     description: settings.hero_tagline,
-    icons: settings.favicon_url ? { icon: settings.favicon_url } : undefined,
+    // "./" resolves against each route's own path, so the home page gets "/"
+    // and inner pages get their own canonical instead of inheriting the home URL.
+    alternates: { canonical: "./" },
+    // Icons and the link-preview image come from the static file conventions
+    // (icon.tsx, apple-icon.tsx, opengraph-image.tsx).
     openGraph: {
       title: settings.site_name,
       description: settings.hero_tagline,
-      images: settings.og_image_url ? [settings.og_image_url] : undefined,
+      url: "./",
+      siteName: settings.site_name,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: settings.site_name,
+      description: settings.hero_tagline,
     },
   };
 }
@@ -40,10 +59,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [settings, socialLinks, logos] = await Promise.all([
+  const [settings, socialLinks, logos, resume] = await Promise.all([
     getSiteSettings(),
     getSocialLinks(),
     getLogoVariants(),
+    getResume().catch(() => null),
   ]);
   const navbarLogos = resolveNavbarLogos(logos);
 
@@ -61,6 +81,7 @@ export default async function RootLayout({
           tagline={settings.tagline}
           whatsappNumber={settings.whatsapp_number}
           socialLinks={socialLinks}
+          hasResume={Boolean(resume?.file_url)}
         />
         <WhatsAppButton number={settings.whatsapp_number} />
       </body>

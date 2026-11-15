@@ -122,7 +122,7 @@ export function CampaignReviewClient({
   passwordRequired: boolean;
   initialUnlocked: boolean;
 }) {
-  const [unlocked, setUnlocked] = useState(initialUnlocked);
+  const unlocked = initialUnlocked;
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [localAssets, setLocalAssets] = useState(assets);
@@ -144,7 +144,8 @@ export function CampaignReviewClient({
       setError(data.message || "Incorrect password.");
       return;
     }
-    setUnlocked(true);
+    // Content is only rendered by the server once the access cookie is set.
+    window.location.reload();
   }
 
   async function setApproval(assetId: string, approval_status: string) {

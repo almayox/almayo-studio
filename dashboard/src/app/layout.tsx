@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     template: "%s · Almayo Studio Admin",
   },
   description: "Admin dashboard for Almayo Studio portfolio.",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

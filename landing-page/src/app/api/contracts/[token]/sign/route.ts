@@ -4,7 +4,7 @@ import {
   type SignerDevicePayload,
 } from "@/lib/deviceFingerprint";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { checkRateLimit, clientIp } from "@/lib/rateLimit";
+import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rateLimit";
 
 export async function POST(
   request: Request,
@@ -21,11 +21,12 @@ export async function POST(
     return NextResponse.json({ message: "Too many attempts. Try again later." }, { status: 429 });
   }
 
-  const body = (await request.json()) as {
-    signedByName?: string;
-  } & SignerDevicePayload;
+  const body = await readJsonObject(request);
+  if (!body) {
+    return NextResponse.json({ message: "Invalid request." }, { status: 400 });
+  }
 
-  const trimmedName = body.signedByName?.trim() ?? "";
+  const trimmedName = stringField(body.signedByName, 120);
   if (!trimmedName) {
     return NextResponse.json({ message: "Full name is required to sign" }, { status: 400 });
   }
@@ -45,7 +46,7 @@ export async function POST(
   const supabase = createAdminClient();
   const { data: contract, error: fetchError } = await supabase
     .from("contracts")
-    .select("id, status")
+    .select("id, status, developer_signed_at")
     .eq("token", token)
     .maybeSingle();
 
@@ -62,13 +63,16 @@ export async function POST(
     );
   }
 
-  const forwarded = request.headers.get("x-forwarded-for");
-  const signerIp =
-    forwarded?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    null;
+  if (!contract.developer_signed_at) {
+    return NextResponse.json(
+      { message: "This contract is not ready for signing yet." },
+      { status: 409 },
+    );
+  }
+
+  const signerIp = ip === "unknown" ? null : ip;
   const ua = request.headers.get("user-agent") || "";
-  const signerDeviceInfo = buildSignerDeviceInfo(signerIp, ua, body);
+  const signerDeviceInfo = buildSignerDeviceInfo(signerIp, ua, body as SignerDevicePayload);
 
   const { data: updated, error: updateError } = await supabase
     .from("contracts")
@@ -81,11 +85,16 @@ export async function POST(
     })
     .eq("id", contract.id)
     .eq("status", "sent")
+    .not("developer_signed_at", "is", null)
     .select("id")
     .maybeSingle();
 
   if (updateError) {
-    return NextResponse.json({ message: updateError.message }, { status: 500 });
+    console.error("contract sign failed", updateError.message);
+    return NextResponse.json(
+      { message: "Could not sign the contract. Please try again." },
+      { status: 500 },
+    );
   }
   if (!updated) {
     return NextResponse.json(

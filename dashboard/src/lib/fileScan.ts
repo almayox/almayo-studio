@@ -18,12 +18,19 @@ const BLOCKED_EXTENSIONS = new Set([
   "apk",
   "deb",
   "rpm",
+  "svg",
+  "svgz",
+  "html",
+  "htm",
+  "xhtml",
 ]);
 
 const ALLOWED_MIME_PREFIXES = ["image/", "video/", "application/pdf", "audio/"];
 
+// SVG is intentionally not allowed: it can carry scripts and is served as-is.
+const BLOCKED_MIME = new Set(["image/svg+xml", "text/html", "application/xhtml+xml"]);
+
 const ALLOWED_MIME_EXACT = new Set([
-  "image/svg+xml",
   "application/zip",
   "application/x-zip-compressed",
 ]);
@@ -49,8 +56,10 @@ export function validateUploadBasics(file: File, maxBytes: number): ScanResult {
   }
 
   const mime = (file.type || "").toLowerCase();
+  if (!mime || BLOCKED_MIME.has(mime)) {
+    return { ok: false, reason: "Unsupported file type." };
+  }
   if (
-    mime &&
     !ALLOWED_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix)) &&
     !ALLOWED_MIME_EXACT.has(mime)
   ) {
@@ -84,8 +93,14 @@ export async function scanFileBuffer(
   const detectedMime = await detectMime(buffer);
   const mime = (detectedMime || declaredMime || "").toLowerCase();
 
+  if (!mime || BLOCKED_MIME.has(mime) || BLOCKED_MIME.has((declaredMime || "").toLowerCase())) {
+    return { ok: false, reason: "Unsupported file type." };
+  }
+  // Binary formats must be recognised from their content, not just their label.
+  if (!detectedMime && /^(image|video|audio)\/|^application\/(pdf|zip|x-zip-compressed)$/.test(mime)) {
+    return { ok: false, reason: "File content does not match its type." };
+  }
   if (
-    mime &&
     !ALLOWED_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix)) &&
     !ALLOWED_MIME_EXACT.has(mime)
   ) {

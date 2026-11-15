@@ -4,7 +4,7 @@
 
 Hi, I'm **Almayo Ibrahim**. I design and build digital products end to end: brand identity, UI/UX, and production-ready web applications. This repository powers my personal portfolio and studio website, **Almayo Studio**.
 
-🌐 **Website:** [almayostudio.com](https://almayostudio.com) *(update when live)*  
+🌐 **Website:** [almayostudio.com](https://almayostudio.com)  
 📍 **Based in:** Kuwait · Working with clients in Kuwait, EU, and Ethiopia  
 📧 **Contact:** [almayo.online@gmail.com](mailto:almayo.online@gmail.com)
 
@@ -74,6 +74,19 @@ almayo-studio/
 ```
 
 ---
+
+## Deploying
+
+Two Vercel projects share one Supabase project.
+
+| App | Folder | Address | Deploy |
+|---|---|---|---|
+| Public site | `landing-page/` | `almayostudio.com` | `cd landing-page && npm run deploy` |
+| Dashboard | `dashboard/` | `dashboard.almayostudio.com` | `cd dashboard && npm run deploy` |
+
+`npm run build` only compiles the app locally to check it; `npm run deploy` builds it on Vercel and publishes it to production. `npm run lint` checks code style and common mistakes.
+
+Environment variables are listed in each app's `.env.example`. Database changes live in `supabase/` as SQL files that are run by hand in the Supabase SQL Editor, in this order: `schema.sql`, `schema_parity.sql`, `schema_contracts.sql`, `schema_campaigns.sql`, `schema_updates.sql`, `schema_security.sql`, `schema_about_depth.sql`, `schema_testimonials.sql`, `schema_launch_1_before_deploy.sql`, then (after the code is deployed) `schema_launch_2_after_deploy.sql`.
 
 ## For recruiters & hiring teams
 

@@ -41,22 +41,23 @@ export function SearchSelect({
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
     };
     document.addEventListener("mousedown", onPointer);
     return () => document.removeEventListener("mousedown", onPointer);
   }, [open]);
 
   useEffect(() => {
-    if (open) {
-      setQuery("");
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
+    if (open) requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
 
   function choose(next: string) {
     onChange(next);
     setOpen(false);
+    setQuery("");
   }
 
   return (
@@ -64,7 +65,10 @@ export function SearchSelect({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          setQuery("");
+          setOpen((prev) => !prev);
+        }}
         className={`${controlClass} flex items-center justify-between gap-2 text-left`}
         aria-haspopup="listbox"
         aria-expanded={open}

@@ -6,6 +6,7 @@ import { DropUpload } from "@/components/DropUpload";
 import { createClient } from "@/lib/supabase/client";
 import { uploadStudioFile } from "@/lib/upload";
 import type { ResumeFile } from "@/lib/types";
+import { StorageLink } from "@/components/StorageMedia";
 
 export function ResumeUpload({
   resume,
@@ -63,14 +64,14 @@ export function ResumeUpload({
         Shown on the public /resume page for download.
       </p>
       {resume?.file_url ? (
-        <a
+        <StorageLink
           href={resume.file_url}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-3 inline-block text-sm text-navy underline"
         >
           {resume.original_name || "Current resume"}
-        </a>
+        </StorageLink>
       ) : (
         <p className="mt-3 text-sm text-navy/55">No resume uploaded yet.</p>
       )}

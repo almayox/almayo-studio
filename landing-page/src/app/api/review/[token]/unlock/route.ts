@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit, clientIp } from "@/lib/rateLimit";
-import { setReviewAccessCookie, assertReviewAccess } from "@/lib/reviewAccess";
+import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rateLimit";
+import { setReviewAccessCookie } from "@/lib/reviewAccess";
 import { getReviewCampaignByToken, verifyReviewPassword } from "@/lib/reviewServer";
 
 export async function POST(
@@ -13,11 +13,26 @@ export async function POST(
     key: `review-unlock:${ip}:${token}`,
     limit: 10,
     windowMs: 15 * 60 * 1000,
+    failClosed: true,
   });
-  if (!limit.allowed) {
+  // Second limit per link, so guesses cannot be spread across many addresses.
+  const tokenLimit = limit.allowed
+    ? await checkRateLimit({
+        key: `review-unlock-token:${token}`,
+        limit: 40,
+        windowMs: 60 * 60 * 1000,
+        failClosed: true,
+      })
+    : limit;
+  if (!limit.allowed || !tokenLimit.allowed) {
     return NextResponse.json(
       { message: "Too many attempts. Try again later." },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfterSec ?? 60) } },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(limit.retryAfterSec ?? tokenLimit.retryAfterSec ?? 60),
+        },
+      },
     );
   }
 
@@ -33,8 +48,8 @@ export async function POST(
     return response;
   }
 
-  const body = (await request.json()) as { password?: string };
-  const password = body.password?.trim() ?? "";
+  const body = await readJsonObject(request);
+  const password = stringField(body?.password, 200);
   if (!password) {
     return NextResponse.json({ message: "Password is required." }, { status: 400 });
   }
@@ -44,7 +59,7 @@ export async function POST(
     return NextResponse.json({ message: "Incorrect password." }, { status: 401 });
   }
 
-  const cookie = setReviewAccessCookie(token);
+  const cookie = setReviewAccessCookie(token, campaign.review_password_hash);
   const response = NextResponse.json({ success: true });
   response.cookies.set(cookie.name, cookie.value, cookie.options);
   return response;

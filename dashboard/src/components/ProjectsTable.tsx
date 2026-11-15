@@ -7,7 +7,30 @@ import { Pencil } from "lucide-react";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import type { Project } from "@/lib/types";
 
-export function ProjectsTable({ projects }: { projects: Project[] }) {
+function ContractBadge({ required, status }: { required: boolean; status?: string }) {
+  if (!required) return <span className="text-xs text-navy/40">Not needed</span>;
+  const tone =
+    status === "signed"
+      ? "bg-emerald-50 text-emerald-700"
+      : status
+        ? "bg-amber-50 text-amber-700"
+        : "bg-red-50 text-red-700";
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${tone}`}>
+      {status || "Missing"}
+    </span>
+  );
+}
+
+export function ProjectsTable({
+  projects,
+  clientNames = {},
+  contractStatus = {},
+}: {
+  projects: Project[];
+  clientNames?: Record<string, string>;
+  contractStatus?: Record<string, string>;
+}) {
   const pagination = usePagination(projects, 10);
 
   return (
@@ -16,7 +39,9 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
         <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
           <tr>
             <th className="px-4 py-3 font-medium">Title</th>
+            <th className="hidden px-4 py-3 font-medium md:table-cell">Client</th>
             <th className="px-4 py-3 font-medium">Status</th>
+            <th className="hidden px-4 py-3 font-medium lg:table-cell">Contract</th>
             <th className="hidden px-4 py-3 font-medium sm:table-cell">Featured</th>
             <th className="px-4 py-3 font-medium text-right">Actions</th>
           </tr>
@@ -28,6 +53,13 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
                 <p className="font-medium text-navy">{project.title}</p>
                 <p className="text-xs text-navy/45">/{project.slug}</p>
               </td>
+              <td className="hidden px-4 py-3 text-navy/70 md:table-cell">
+                {project.client_id && clientNames[project.client_id] ? (
+                  clientNames[project.client_id]
+                ) : (
+                  <span className="text-xs font-medium text-red-700">No client</span>
+                )}
+              </td>
               <td className="px-4 py-3">
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -38,6 +70,12 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
                 >
                   {project.is_visible ? "Published" : "Draft"}
                 </span>
+              </td>
+              <td className="hidden px-4 py-3 lg:table-cell">
+                <ContractBadge
+                  required={Boolean(project.contract_required)}
+                  status={contractStatus[project.id]}
+                />
               </td>
               <td className="hidden px-4 py-3 text-navy/70 sm:table-cell">
                 {project.is_featured ? "Yes" : "-"}

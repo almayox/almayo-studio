@@ -286,14 +286,7 @@ export default async function AboutPage() {
               >
                 Download Resume
               </a>
-            ) : (
-              <Link
-                href="/resume"
-                className="rounded-xl border border-navy/15 px-6 py-3 text-sm font-semibold text-navy"
-              >
-                Download Resume
-              </Link>
-            )}
+            ) : null}
           </Reveal>
         </div>
       </section>

@@ -19,10 +19,10 @@ export default async function ClientsPage() {
             Clients
           </p>
           <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-navy sm:text-5xl">
-            Brands I've worked with
+            Brands I’ve worked with
           </h1>
           <p className="mt-4 max-w-2xl text-navy/65">
-            A selection of companies and studios I've partnered with on design and product work.
+            A selection of companies and studios I’ve partnered with on design and product work.
           </p>
         </Reveal>
 
@@ -35,11 +35,13 @@ export default async function ClientsPage() {
             ))}
           </div>
         ) : (
-          <div className="mt-12 rounded-2xl border border-dashed border-mist bg-white px-6 py-16 text-center">
-            <p className="font-[family-name:var(--font-display)] text-xl text-navy">
-              Clients will appear here
-            </p>
-          </div>
+          <p className="mt-12 text-navy/65">
+            I’m putting together a selection of client work to share here.{" "}
+            <Link href="/contact" className="font-medium text-navy underline underline-offset-4">
+              Get in touch
+            </Link>{" "}
+            to hear who I’ve worked with.
+          </p>
         )}
       </div>
   );

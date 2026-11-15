@@ -23,6 +23,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { CatalogWithStats } from "@/lib/types";
 import { slugify } from "@/lib/types";
+import { StorageImage } from "@/components/StorageMedia";
 
 export function CatalogsManager({ initialCatalogs }: { initialCatalogs: CatalogWithStats[] }) {
   const router = useRouter();
@@ -193,8 +194,7 @@ export function CatalogsManager({ initialCatalogs }: { initialCatalogs: CatalogW
                   <td className="px-4 py-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy/5 text-navy">
                       {isCatalogIconUrl(catalog.icon) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <StorageImage
                           src={catalog.icon!}
                           alt=""
                           className="h-6 w-6 object-contain"

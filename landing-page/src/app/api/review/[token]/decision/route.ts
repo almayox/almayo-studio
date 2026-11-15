@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { checkRateLimit, clientIp } from "@/lib/rateLimit";
+import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rateLimit";
 import { assertReviewAccess } from "@/lib/reviewAccess";
 import { getReviewCampaignByToken } from "@/lib/reviewServer";
 
@@ -33,12 +33,9 @@ export async function POST(
     return NextResponse.json({ message: "Review is already submitted." }, { status: 409 });
   }
 
-  const body = (await request.json()) as {
-    client_decision?: "approved" | "changes_requested";
-    author_name?: string;
-  };
-  const client_decision = body.client_decision;
-  const author_name = body.author_name?.trim() ?? "";
+  const body = await readJsonObject(request);
+  const client_decision = body?.client_decision;
+  const author_name = stringField(body?.author_name, 120);
 
   if (!author_name) {
     return NextResponse.json({ message: "Enter your name before submitting." }, { status: 400 });

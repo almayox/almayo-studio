@@ -16,7 +16,7 @@ export async function assertReviewAccess(token: string, passwordRequired: boolea
   if (passwordRequired) {
     const cookieStore = await cookies();
     const cookie = cookieStore.get(reviewCookieName(token))?.value;
-    if (!verifyReviewAccessValue(cookie, token)) {
+    if (!verifyReviewAccessValue(cookie, token, campaign.review_password_hash ?? "")) {
       return { ok: false as const, status: 401, message: "Review password required." };
     }
   }
@@ -24,8 +24,8 @@ export async function assertReviewAccess(token: string, passwordRequired: boolea
   return { ok: true as const, campaign };
 }
 
-export function setReviewAccessCookie(token: string) {
-  const { value, maxAge } = createReviewAccessValue(token);
+export function setReviewAccessCookie(token: string, passwordHash: string | null = null) {
+  const { value, maxAge } = createReviewAccessValue(token, passwordHash ?? "");
   return {
     name: reviewCookieName(token),
     value,

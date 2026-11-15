@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { scanFileBuffer } from "@/lib/fileScan";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { toStoredStorageUrl } from "@/lib/storage";
+import { isAllowedAdmin } from "@/lib/adminAccess";
+import { isSafeFolder, isUploadBucket } from "@/lib/uploadPaths";
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
@@ -15,11 +17,16 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
+  if (!user || !(await isAllowedAdmin(supabase, user.email))) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return NextResponse.json({ message: "Invalid upload." }, { status: 400 });
+  }
   const file = form.get("file");
   const bucket = String(form.get("bucket") || "studio-files");
   const folder = String(form.get("folder") || "uploads");
@@ -27,8 +34,11 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ message: "File is required." }, { status: 400 });
   }
-  if (!["studio-files", "project-media"].includes(bucket)) {
+  if (!isUploadBucket(bucket)) {
     return NextResponse.json({ message: "Invalid bucket." }, { status: 400 });
+  }
+  if (!isSafeFolder(folder)) {
+    return NextResponse.json({ message: "Invalid folder." }, { status: 400 });
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());
@@ -44,9 +54,12 @@ export async function POST(request: Request) {
   const { error } = await admin.storage.from(bucket).upload(path, buffer, {
     upsert: false,
     contentType: scan.mime,
+    // File names are unique per upload, so they can be cached for a year.
+    cacheControl: "31536000",
   });
   if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    console.error("upload failed", error.message);
+    return NextResponse.json({ message: "Could not store the file." }, { status: 500 });
   }
 
   const storedUrl = toStoredStorageUrl(bucket, path);

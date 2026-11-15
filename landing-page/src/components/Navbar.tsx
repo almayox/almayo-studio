@@ -48,15 +48,21 @@ export function Navbar({
   const [isDark, setIsDark] = useState(true);
   const intersectingRef = useRef<Set<Element>>(new Set());
 
-  useEffect(() => {
+  // Reset on navigation during render rather than in an effect.
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setOpen(false);
     setIsDark(true);
+  }
+
+  useEffect(() => {
     intersectingRef.current = new Set();
 
     const targets = document.querySelectorAll('[data-navbar-theme="dark"]');
     if (!targets.length) {
-      setIsDark(false);
-      return;
+      const frame = requestAnimationFrame(() => setIsDark(false));
+      return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(

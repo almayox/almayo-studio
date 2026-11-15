@@ -5,7 +5,10 @@ import type { Catalog, Client } from "@/lib/types";
 
 export const metadata = { title: "New project" };
 
-export default async function NewProjectPage() {
+type Props = { searchParams: Promise<{ client?: string }> };
+
+export default async function NewProjectPage({ searchParams }: Props) {
+  const { client: initialClientId } = await searchParams;
   const supabase = await createClient();
   const [{ data: catalogs }, { data: clients }] = await Promise.all([
     supabase.from("catalogs").select("*").order("sort_order", { ascending: true }),
@@ -24,6 +27,7 @@ export default async function NewProjectPage() {
         <ProjectForm
           catalogs={(catalogs as Catalog[]) ?? []}
           clients={(clients as Client[]) ?? []}
+          initialClientId={typeof initialClientId === "string" ? initialClientId : ""}
         />
       </div>
     </div>

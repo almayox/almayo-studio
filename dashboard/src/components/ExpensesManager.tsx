@@ -21,6 +21,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import type { Expense } from "@/lib/types";
+import { StorageLink } from "@/components/StorageMedia";
 
 const emptyForm = {
   title: "",
@@ -279,14 +280,14 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
                         .join(" · ") || "-"}
                     </p>
                     {expense.receipt_url ? (
-                      <a
+                      <StorageLink
                         href={expense.receipt_url}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-1 inline-block text-xs font-medium text-navy underline"
                       >
                         Receipt
-                      </a>
+                      </StorageLink>
                     ) : null}
                   </td>
                   <td className="px-4 py-3 text-navy/80">
@@ -432,14 +433,14 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
                 : "Drop receipt"}
           </DropUpload>
           {form.receiptUrl ? (
-            <a
+            <StorageLink
               href={form.receiptUrl}
               target="_blank"
               rel="noreferrer"
               className="text-xs text-navy underline"
             >
               View current receipt
-            </a>
+            </StorageLink>
           ) : null}
           {error ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

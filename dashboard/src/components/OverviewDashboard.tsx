@@ -167,6 +167,7 @@ export function OverviewDashboard({ stats }: { stats: OverviewStats }) {
               { href: "/catalogs", label: "Catalogs" },
               { href: "/clients", label: "Clients" },
               { href: "/leads", label: "Leads" },
+              { href: "/quotations", label: "Quotations" },
               { href: "/invoices", label: "Invoices" },
               { href: "/expenses", label: "Expenses" },
               { href: "/contracts", label: "Contracts" },

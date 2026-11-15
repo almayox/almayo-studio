@@ -57,18 +57,34 @@ function useRoundSprite() {
   }, []);
 }
 
+// Small seeded PRNG (mulberry32) so star positions are generated without
+// calling Math.random during render.
+function scatterPositions(
+  count: number,
+  spread: [number, number, number],
+  seed: number,
+) {
+  let state = seed >>> 0;
+  const random = () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const arr = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    arr[i * 3] = (random() - 0.5) * spread[0];
+    arr[i * 3 + 1] = (random() - 0.5) * spread[1];
+    arr[i * 3 + 2] = (random() - 0.5) * spread[2] - 1;
+  }
+  return arr;
+}
+
 function AmbientStars({ sprite }: { sprite: THREE.Texture }) {
   const ref = useRef<THREE.Points>(null);
   const count = 1600;
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
-    for (let i = 0; i < count; i += 1) {
-      arr[i * 3] = (Math.random() - 0.5) * 18;
-      arr[i * 3 + 1] = (Math.random() - 0.5) * 14;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 10 - 1;
-    }
-    return arr;
-  }, []);
+  const positions = useMemo(() => scatterPositions(count, [18, 14, 10], 0x51a7), []);
 
   useFrame((_, delta) => {
     if (ref.current) ref.current.rotation.y += delta * 0.01;
@@ -96,15 +112,7 @@ function AmbientStars({ sprite }: { sprite: THREE.Texture }) {
 function Sparkles({ sprite }: { sprite: THREE.Texture }) {
   const materialRef = useRef<THREE.PointsMaterial>(null);
   const count = 200;
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
-    for (let i = 0; i < count; i += 1) {
-      arr[i * 3] = (Math.random() - 0.5) * 16;
-      arr[i * 3 + 1] = (Math.random() - 0.5) * 12;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 8 - 1;
-    }
-    return arr;
-  }, []);
+  const positions = useMemo(() => scatterPositions(count, [16, 12, 8], 0x9e37), []);
 
   useFrame(({ clock }) => {
     if (materialRef.current) {

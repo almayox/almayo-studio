@@ -18,20 +18,12 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { filterBySearch, ListFilters } from "@/components/ui/ListFilters";
-import {
-  Copy,
-  Eye,
-  EyeOff,
-  FileText,
-  History,
-  Mail,
-  Pencil,
-  Settings2,
-  Trash2,
-  Wallet,
-} from "lucide-react";
+import { FileText, History, Mail, Pencil, Trash2, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { downloadInvoicePdf } from "@/lib/invoicePdf";
+import { downloadInvoicePdf, PdfUnsupportedTextError } from "@/lib/invoicePdf";
+import { resolveStorageUrl } from "@/lib/storage";
+import { insertWithNextNumber, nextDocNumber } from "@/lib/docNumber";
+import { computeTotals, lineAmount, round2, type DiscountMode } from "@/lib/totals";
 import type { Client, Invoice, InvoiceItem, InvoicePayment, InvoicePaymentEvent } from "@/lib/types";
 
 const PAYMENT_METHODS = [
@@ -44,6 +36,11 @@ const PAYMENT_METHODS = [
   { value: "other", label: "Other" },
 ] as const;
 
+/** Status value this codebase uses for an invoice that is partly paid. */
+const PARTIAL_STATUS = "partial";
+const FOREIGN_KEY_VIOLATION = "23503";
+
+type SupabaseBrowserClient = ReturnType<typeof createClient>;
 type LineDraft = { description: string; quantity: string; unit_price: string };
 type InvoiceRow = Invoice & {
   invoice_items?: InvoiceItem[];
@@ -57,18 +54,98 @@ const emptyLine = (): LineDraft => ({
   unit_price: "",
 });
 
-function computeTotals(
-  lines: { quantity: number; unit_price: number }[],
-  discountPercent: number,
-  discountAmount: number,
-  taxPercent: number,
-) {
-  const subtotal = lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
-  const discount =
-    discountAmount > 0 ? discountAmount : subtotal * (discountPercent / 100);
-  const taxable = Math.max(0, subtotal - discount);
-  const tax = taxable * (taxPercent / 100);
-  return { subtotal, discount, tax, total: taxable + tax };
+function methodLabel(method: string | null) {
+  if (!method) return "";
+  return PAYMENT_METHODS.find((m) => m.value === method)?.label || method;
+}
+
+/** Next invoice number (INV-<year>-NNN); see nextDocNumber. */
+function nextInvoiceNumber(existing: string[]) {
+  return nextDocNumber("INV", existing);
+}
+
+/** Line drafts → rows as they are stored (2-decimal precision, like the database). */
+function toLineItems(lines: LineDraft[]) {
+  return lines.map((line, index) => {
+    const quantity = Number(line.quantity) > 0 ? round2(Number(line.quantity)) : 1;
+    const unit_price = round2(Number(line.unit_price) || 0);
+    return {
+      description: line.description.trim(),
+      quantity,
+      unit_price,
+      amount: lineAmount({ quantity, unit_price }),
+      sort_order: index,
+    };
+  });
+}
+
+/** Status implied by the payments received; keeps the current one when nothing is paid. */
+function statusForPayments(current: string, paid: number, total: number) {
+  if (paid <= 0) {
+    return current === "paid" || current === PARTIAL_STATUS ? "sent" : current;
+  }
+  return paid >= total ? "paid" : PARTIAL_STATUS;
+}
+
+function invoiceBalance(invoice: Pick<Invoice, "total" | "amount_paid">) {
+  const total = Number(invoice.total) || 0;
+  const paid = Number(invoice.amount_paid || 0);
+  return { total, paid, balance: Math.max(0, round2(total - paid)) };
+}
+
+/**
+ * Re-reads every payment of the invoice and writes amount_paid (their sum)
+ * and the matching status. Returns an error message, or null on success.
+ */
+async function syncInvoicePayments(
+  supabase: SupabaseBrowserClient,
+  invoiceId: string,
+): Promise<string | null> {
+  const { data: payments, error: paymentsError } = await supabase
+    .from("invoice_payments")
+    .select("amount")
+    .eq("invoice_id", invoiceId);
+  if (paymentsError) return paymentsError.message;
+
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("total, status")
+    .eq("id", invoiceId)
+    .single();
+  if (invoiceError) return invoiceError.message;
+
+  const paid = round2(
+    (payments || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
+  );
+  const { error: updateError } = await supabase
+    .from("invoices")
+    .update({
+      amount_paid: paid,
+      status: statusForPayments(String(invoice.status), paid, Number(invoice.total) || 0),
+    })
+    .eq("id", invoiceId);
+  return updateError ? updateError.message : null;
+}
+
+function BalanceSummary({ invoice }: { invoice: InvoiceRow }) {
+  const { total, paid, balance } = invoiceBalance(invoice);
+  const cells = [
+    { label: "Total", value: total, tone: "text-navy" },
+    { label: "Paid so far", value: paid, tone: "text-emerald-700" },
+    { label: "Balance due", value: balance, tone: balance > 0 ? "text-amber-700" : "text-emerald-700" },
+  ];
+  return (
+    <dl className="grid grid-cols-3 gap-2 rounded-xl border border-mist bg-foam/50 p-3">
+      {cells.map((cell) => (
+        <div key={cell.label}>
+          <dt className="text-xs text-navy/55">{cell.label}</dt>
+          <dd className={`text-sm font-semibold tabular-nums ${cell.tone}`}>
+            {cell.value.toFixed(2)} {invoice.currency}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 export function InvoicesManager({
@@ -92,7 +169,7 @@ export function InvoicesManager({
   const [notes, setNotes] = useState("");
   const [discountPercent, setDiscountPercent] = useState("");
   const [discountAmount, setDiscountAmount] = useState("");
-  const [discountMode, setDiscountMode] = useState<"percent" | "amount">("percent");
+  const [discountMode, setDiscountMode] = useState<DiscountMode>("percent");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [taxPercent, setTaxPercent] = useState("");
@@ -103,27 +180,32 @@ export function InvoicesManager({
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [paymentNotes, setPaymentNotes] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSaving, setPaymentSaving] = useState(false);
   const [historyInvoiceId, setHistoryInvoiceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const nextNumber = useMemo(() => {
-    const year = new Date().getFullYear();
-    return `INV-${year}-${String(initialInvoices.length + 1).padStart(3, "0")}`;
-  }, [initialInvoices.length]);
+  // Shown in the form as a preview; the real number is recomputed from the
+  // database at insert time.
+  const nextNumber = useMemo(
+    () => nextInvoiceNumber(initialInvoices.map((inv) => inv.invoice_number)),
+    [initialInvoices],
+  );
 
-  const draftMath = useMemo(() => {
-    const parsed = lines.map((line) => ({
-      quantity: Number(line.quantity) || 0,
-      unit_price: Number(line.unit_price) || 0,
-    }));
-    return computeTotals(
-      parsed,
-      Number(discountPercent) || 0,
-      discountMode === "amount" ? Number(discountAmount) || 0 : 0,
-      Number(taxPercent) || 0,
-    );
+  // Single source for both the preview and what gets saved.
+  const draft = useMemo(() => {
+    const items = toLineItems(lines);
+    const totals = computeTotals({
+      lines: items,
+      discountMode,
+      discountValue: discountMode === "percent" ? discountPercent : discountAmount,
+      taxPercent,
+    });
+    return { items, totals };
   }, [lines, discountPercent, discountAmount, discountMode, taxPercent]);
+  const draftMath = draft.totals;
 
   const summary = useMemo(() => {
     let invoiced = 0;
@@ -219,30 +301,22 @@ export function InvoicesManager({
     event.preventDefault();
     setSaving(true);
     setError(null);
-    const validLines = lines.filter((l) => l.description && Number(l.unit_price) >= 0);
-    if (!validLines.length) {
-      setError("Add at least one line item.");
+
+    const stop = (message: string) => {
+      setError(message);
       setSaving(false);
-      return;
+    };
+
+    // Exactly what the preview shows.
+    const { items, totals } = draft;
+    if (!items.length) return stop("Add at least one line item.");
+    if (items.some((item) => !item.description)) {
+      return stop("Every line item needs a description.");
+    }
+    if (items.some((item) => item.unit_price < 0)) {
+      return stop("Unit price cannot be negative.");
     }
 
-    const computed = validLines.map((line, index) => {
-      const qty = Number(line.quantity) || 1;
-      const price = Number(line.unit_price) || 0;
-      return {
-        description: line.description,
-        quantity: qty,
-        unit_price: price,
-        amount: qty * price,
-        sort_order: index,
-      };
-    });
-    const { subtotal, total } = computeTotals(
-      computed,
-      discountMode === "percent" ? Number(discountPercent) || 0 : 0,
-      discountMode === "amount" ? Number(discountAmount) || 0 : 0,
-      Number(taxPercent) || 0,
-    );
     const supabase = createClient();
 
     const invoicePayload = {
@@ -251,18 +325,18 @@ export function InvoicesManager({
       client_address: clientAddress || null,
       client_id: clientId || null,
       currency,
-      subtotal,
+      subtotal: totals.subtotal,
       discount_percent:
         discountMode === "percent" && discountPercent !== ""
           ? Number(discountPercent)
           : null,
       discount_amount:
         discountMode === "amount" && discountAmount !== ""
-          ? Number(discountAmount)
+          ? round2(Number(discountAmount))
           : null,
       tax_percent: taxPercent === "" ? null : Number(taxPercent),
       tax_label: taxLabel || null,
-      total,
+      total: totals.total,
       due_date: dueDate || null,
       notes: notes || null,
     };
@@ -270,53 +344,87 @@ export function InvoicesManager({
     if (editingId) {
       const existing = initialInvoices.find((i) => i.id === editingId);
       const amountPaid = Number(existing?.amount_paid || 0);
-      let status = existing?.status || "draft";
-      if (amountPaid >= total && total > 0) status = "paid";
-      else if (amountPaid > 0 && amountPaid < total) status = "partial";
+      const status = statusForPayments(existing?.status || "draft", amountPaid, totals.total);
 
+      // 1. Remember which item rows exist now. They are only deleted once
+      //    their replacements are safely stored.
+      const { data: oldItems, error: oldItemsError } = await supabase
+        .from("invoice_items")
+        .select("id")
+        .eq("invoice_id", editingId);
+      if (oldItemsError) return stop(oldItemsError.message);
+      const oldItemIds = (oldItems || []).map((row) => row.id as string);
+
+      // 2. Insert the new items.
+      const { data: newItems, error: itemError } = await supabase
+        .from("invoice_items")
+        .insert(items.map((line) => ({ ...line, invoice_id: editingId })))
+        .select("id");
+      if (itemError) return stop(`Line items were not saved: ${itemError.message}`);
+      const newItemIds = (newItems || []).map((row) => row.id as string);
+
+      // 3. Update the invoice; undo the inserted items if that fails.
       const { error: updateError } = await supabase
         .from("invoices")
-        .update({ ...invoicePayload, status, amount_paid: amountPaid })
+        .update({ ...invoicePayload, status })
         .eq("id", editingId);
       if (updateError) {
-        setError(updateError.message);
-        setSaving(false);
-        return;
+        const { error: undoError } = newItemIds.length
+          ? await supabase.from("invoice_items").delete().in("id", newItemIds)
+          : { error: null };
+        return stop(
+          undoError
+            ? `${updateError.message}. The new line items could not be rolled back (${undoError.message}); reload before editing again.`
+            : updateError.message,
+        );
       }
-      await supabase.from("invoice_items").delete().eq("invoice_id", editingId);
-      const { error: itemError } = await supabase.from("invoice_items").insert(
-        computed.map((line) => ({ ...line, invoice_id: editingId })),
-      );
-      if (itemError) {
-        setError(itemError.message);
-        setSaving(false);
-        return;
+
+      // 4. Only now remove the previous items, by id.
+      if (oldItemIds.length) {
+        const { error: deleteError } = await supabase
+          .from("invoice_items")
+          .delete()
+          .in("id", oldItemIds);
+        if (deleteError) {
+          router.refresh();
+          return stop(
+            `Invoice saved, but the previous line items could not be removed: ${deleteError.message}. Save again to retry.`,
+          );
+        }
       }
     } else {
-      const { data: invoice, error: invoiceError } = await supabase
-        .from("invoices")
-        .insert({
-          ...invoicePayload,
-          invoice_number: nextNumber,
-          status: "draft",
-          amount_paid: 0,
-        })
-        .select("id")
-        .single();
-
-      if (invoiceError) {
-        setError(invoiceError.message);
-        setSaving(false);
-        return;
+      // A duplicate number (someone else created an invoice meanwhile) is
+      // retried once with a freshly computed number.
+      const created = await insertWithNextNumber(supabase, {
+        table: "invoices",
+        numberColumn: "invoice_number",
+        prefix: "INV",
+        values: { ...invoicePayload, status: "draft", amount_paid: 0 },
+      });
+      if (!created.ok) {
+        return stop(
+          created.duplicate
+            ? "That invoice number was just taken. Please try again."
+            : created.message,
+        );
       }
+      const invoiceId = created.id;
 
-      const { error: itemError } = await supabase.from("invoice_items").insert(
-        computed.map((line) => ({ ...line, invoice_id: invoice.id })),
-      );
+      const { error: itemError } = await supabase
+        .from("invoice_items")
+        .insert(items.map((line) => ({ ...line, invoice_id: invoiceId })));
       if (itemError) {
-        setError(itemError.message);
-        setSaving(false);
-        return;
+        // Do not leave an invoice without lines behind.
+        const { error: undoError } = await supabase
+          .from("invoices")
+          .delete()
+          .eq("id", invoiceId);
+        if (undoError) router.refresh();
+        return stop(
+          undoError
+            ? `Line items were not saved: ${itemError.message}. An empty invoice was left behind; delete it from the list.`
+            : `Line items were not saved, so the invoice was not created: ${itemError.message}`,
+        );
       }
     }
 
@@ -326,75 +434,152 @@ export function InvoicesManager({
   }
 
   async function updateStatus(id: string, status: string) {
+    setPageError(null);
     const supabase = createClient();
-    await supabase.from("invoices").update({ status }).eq("id", id);
+    const { error: updateError } = await supabase
+      .from("invoices")
+      .update({ status })
+      .eq("id", id);
+    if (updateError) {
+      setPageError(`Status was not changed: ${updateError.message}`);
+      return;
+    }
     router.refresh();
+  }
+
+  function openPayment(invoice: InvoiceRow) {
+    setPaymentError(null);
+    setPaymentNotes("");
+    setPaymentAmount(invoiceBalance(invoice).balance.toFixed(2));
+    setPaymentInvoiceId(invoice.id);
+  }
+
+  function closePayment() {
+    setPaymentInvoiceId(null);
+    setPaymentError(null);
+  }
+
+  function openHistory(invoice: InvoiceRow) {
+    setPaymentError(null);
+    setHistoryInvoiceId(invoice.id);
+  }
+
+  function closeHistory() {
+    setHistoryInvoiceId(null);
+    setPaymentError(null);
   }
 
   async function recordPayment(event: FormEvent) {
     event.preventDefault();
-    if (!paymentInvoiceId) return;
-    setError(null);
-    const invoice = initialInvoices.find((i) => i.id === paymentInvoiceId);
-    if (!invoice) return;
-    const amount = Number(paymentAmount) || 0;
-    if (amount <= 0) {
-      setError("Payment amount must be greater than 0.");
+    if (!paymentInvoiceId || paymentSaving) return;
+    const invoiceId = paymentInvoiceId;
+    setPaymentError(null);
+
+    const amount = round2(Number(paymentAmount));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentError("Payment amount must be greater than 0.");
+      return;
+    }
+    if (!paymentDate) {
+      setPaymentError("Choose the payment date.");
       return;
     }
 
+    setPaymentSaving(true);
     const supabase = createClient();
-    const { data: payment, error: payError } = await supabase
-      .from("invoice_payments")
-      .insert({
-        invoice_id: paymentInvoiceId,
+    try {
+      // Validate against what is in the database right now, not the page data.
+      const [invoiceResult, paymentsResult] = await Promise.all([
+        supabase.from("invoices").select("total, currency").eq("id", invoiceId).single(),
+        supabase.from("invoice_payments").select("amount").eq("invoice_id", invoiceId),
+      ]);
+      if (invoiceResult.error || paymentsResult.error) {
+        setPaymentError(
+          (invoiceResult.error || paymentsResult.error)?.message ||
+            "Could not load the invoice.",
+        );
+        return;
+      }
+      const invoiceCurrency = String(invoiceResult.data.currency);
+      const paidSoFar = round2(
+        (paymentsResult.data || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
+      );
+      const remaining = round2((Number(invoiceResult.data.total) || 0) - paidSoFar);
+      if (remaining <= 0) {
+        setPaymentError("This invoice is already paid in full.");
+        return;
+      }
+      if (amount > remaining) {
+        setPaymentError(
+          `Payment cannot be more than the balance due (${remaining.toFixed(2)} ${invoiceCurrency}).`,
+        );
+        return;
+      }
+
+      const { data: payment, error: payError } = await supabase
+        .from("invoice_payments")
+        .insert({
+          invoice_id: invoiceId,
+          amount,
+          currency: invoiceCurrency,
+          payment_date: paymentDate,
+          method: paymentMethod,
+          notes: paymentNotes || null,
+        })
+        .select("id")
+        .single();
+      if (payError) {
+        setPaymentError(payError.message);
+        return;
+      }
+
+      // The payment exists from here on: finish the bookkeeping and report
+      // anything that failed instead of leaving the form open for a re-submit.
+      const problems: string[] = [];
+      const syncError = await syncInvoicePayments(supabase, invoiceId);
+      if (syncError) problems.push(`the invoice paid amount/status was not updated (${syncError})`);
+
+      const { error: eventError } = await supabase.from("invoice_payment_events").insert({
+        invoice_id: invoiceId,
+        action: "added",
         amount,
-        currency: invoice.currency,
+        currency: invoiceCurrency,
         payment_date: paymentDate,
         method: paymentMethod,
         notes: paymentNotes || null,
-      })
-      .select("id")
-      .single();
-    if (payError) {
-      setError(payError.message);
-      return;
+        payment_id: payment?.id ?? null,
+      });
+      if (eventError) problems.push(`the activity log entry was not written (${eventError.message})`);
+
+      setPaymentInvoiceId(null);
+      setPaymentAmount("");
+      setPaymentNotes("");
+      setPageError(problems.length ? `Payment saved, but ${problems.join(" and ")}.` : null);
+      router.refresh();
+    } finally {
+      setPaymentSaving(false);
     }
-
-    await supabase.from("invoice_payment_events").insert({
-      invoice_id: paymentInvoiceId,
-      action: "added",
-      amount,
-      currency: invoice.currency,
-      payment_date: paymentDate,
-      method: paymentMethod,
-      notes: paymentNotes || null,
-      payment_id: payment?.id ?? null,
-    });
-
-    const nextPaid = Number(invoice.amount_paid || 0) + amount;
-    const nextStatus =
-      nextPaid >= Number(invoice.total)
-        ? "paid"
-        : nextPaid > 0
-          ? "partial"
-          : invoice.status;
-    await supabase
-      .from("invoices")
-      .update({ amount_paid: nextPaid, status: nextStatus })
-      .eq("id", paymentInvoiceId);
-
-    setPaymentInvoiceId(null);
-    setPaymentAmount("");
-    setPaymentNotes("");
-    router.refresh();
   }
 
   async function removePayment(payment: InvoicePayment, invoice: InvoiceRow) {
     if (!window.confirm("Delete this payment?")) return;
+    setPaymentError(null);
     const supabase = createClient();
 
-    await supabase.from("invoice_payment_events").insert({
+    const { error: deleteError } = await supabase
+      .from("invoice_payments")
+      .delete()
+      .eq("id", payment.id);
+    if (deleteError) {
+      setPaymentError(`Payment was not deleted: ${deleteError.message}`);
+      return;
+    }
+
+    const problems: string[] = [];
+    const syncError = await syncInvoicePayments(supabase, invoice.id);
+    if (syncError) problems.push(`the invoice paid amount/status was not updated (${syncError})`);
+
+    const { error: eventError } = await supabase.from("invoice_payment_events").insert({
       invoice_id: invoice.id,
       action: "deleted",
       amount: payment.amount,
@@ -404,31 +589,60 @@ export function InvoicesManager({
       notes: payment.notes,
       payment_id: payment.id,
     });
+    if (eventError) problems.push(`the activity log entry was not written (${eventError.message})`);
 
-    await supabase.from("invoice_payments").delete().eq("id", payment.id);
-    const nextPaid = Math.max(0, Number(invoice.amount_paid || 0) - Number(payment.amount));
-    const nextStatus =
-      nextPaid >= Number(invoice.total)
-        ? "paid"
-        : nextPaid > 0
-          ? "partial"
-          : invoice.status === "paid" || invoice.status === "partial"
-            ? "sent"
-            : invoice.status;
-    await supabase
-      .from("invoices")
-      .update({ amount_paid: nextPaid, status: nextStatus })
-      .eq("id", invoice.id);
+    if (problems.length) setPaymentError(`Payment deleted, but ${problems.join(" and ")}.`);
     router.refresh();
   }
 
   async function remove(id: string) {
     if (!window.confirm("Delete this invoice?")) return;
+    setPageError(null);
     const supabase = createClient();
-    await supabase.from("invoice_payments").delete().eq("invoice_id", id);
-    await supabase.from("invoice_items").delete().eq("invoice_id", id);
-    await supabase.from("invoices").delete().eq("id", id);
+
+    // Items, payments and events are removed with the invoice by the
+    // database (on delete cascade), so this is a single all-or-nothing delete.
+    let { error: deleteError } = await supabase.from("invoices").delete().eq("id", id);
+
+    if (deleteError?.code === FOREIGN_KEY_VIOLATION) {
+      // Database without the cascade rules: remove the child rows first.
+      for (const table of ["invoice_payment_events", "invoice_payments", "invoice_items"]) {
+        const { error: childError } = await supabase.from(table).delete().eq("invoice_id", id);
+        if (childError) {
+          setPageError(`Invoice was not deleted: ${childError.message}`);
+          router.refresh();
+          return;
+        }
+      }
+      ({ error: deleteError } = await supabase.from("invoices").delete().eq("id", id));
+    }
+
+    if (deleteError) {
+      setPageError(`Invoice was not deleted: ${deleteError.message}`);
+      return;
+    }
     router.refresh();
+  }
+
+  async function downloadPdf(invoice: InvoiceRow) {
+    setPageError(null);
+    try {
+      // The logo may live in a private bucket: sign it first. A logo that
+      // cannot be signed or loaded is simply left out of the PDF.
+      let signedLogoUrl: string | null = null;
+      try {
+        signedLogoUrl = await resolveStorageUrl(logoUrl);
+      } catch {
+        signedLogoUrl = null;
+      }
+      await downloadInvoicePdf(invoice, signedLogoUrl);
+    } catch (err) {
+      setPageError(
+        err instanceof PdfUnsupportedTextError
+          ? "This PDF font cannot render Arabic text yet"
+          : `Could not generate the PDF${err instanceof Error && err.message ? `: ${err.message}` : "."}`,
+      );
+    }
   }
 
   function emailInvoice(invoice: InvoiceRow) {
@@ -437,10 +651,10 @@ export function InvoicesManager({
         (item) =>
           `- ${item.description}: ${item.quantity} x ${item.unit_price} = ${item.amount} ${invoice.currency}`,
       )
-      .join("%0A");
+      .join("\n");
     const subject = encodeURIComponent(`Invoice ${invoice.invoice_number}`);
     const body = encodeURIComponent(
-      `Hello ${invoice.client_name},\n\nPlease find your invoice details:\n\nInvoice: ${invoice.invoice_number}\nTotal: ${Number(invoice.total).toFixed(2)} ${invoice.currency}\nDue: ${invoice.due_date || "N/A"}\n\nItems:\n${decodeURIComponent(items)}\n\nThank you,\nAlmayo Studio`,
+      `Hello ${invoice.client_name},\n\nPlease find your invoice details:\n\nInvoice: ${invoice.invoice_number}\nTotal: ${Number(invoice.total).toFixed(2)} ${invoice.currency}\nDue: ${invoice.due_date || "N/A"}\n\nItems:\n${items}\n\nThank you,\nAlmayo Studio`,
     );
     window.location.href = `mailto:${invoice.client_email || ""}?subject=${subject}&body=${body}`;
   }
@@ -448,6 +662,15 @@ export function InvoicesManager({
   const historyInvoice = historyInvoiceId
     ? initialInvoices.find((i) => i.id === historyInvoiceId) || null
     : null;
+  const paymentInvoice = paymentInvoiceId
+    ? initialInvoices.find((i) => i.id === paymentInvoiceId) || null
+    : null;
+  const historyPayments = (historyInvoice?.invoice_payments || [])
+    .slice()
+    .sort((a, b) => b.payment_date.localeCompare(a.payment_date));
+  const historyEvents = (historyInvoice?.invoice_payment_events || [])
+    .slice()
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return (
     <div>
@@ -469,6 +692,12 @@ export function InvoicesManager({
           { label: "Invoices", value: initialInvoices.filter((i) => i.status !== "cancelled").length, tone: "slate" },
         ]}
       />
+
+      {pageError ? (
+        <p role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {pageError}
+        </p>
+      ) : null}
 
       <ListFilters
         search={search}
@@ -507,6 +736,9 @@ export function InvoicesManager({
                   <div>
                     <p className="font-medium text-navy">{invoice.invoice_number}</p>
                     <p className="text-xs text-navy/55">{invoice.client_name}</p>
+                    {invoice.quotation_id ? (
+                      <p className="text-xs text-navy/45">From quotation</p>
+                    ) : null}
                   </div>
                   <select
                     value={invoice.status}
@@ -539,7 +771,7 @@ export function InvoicesManager({
                     <ActionButton
                       icon={FileText}
                       label="PDF"
-                      onClick={() => downloadInvoicePdf(invoice, logoUrl)}
+                      onClick={() => downloadPdf(invoice)}
                     />
                     <ActionButton
                       icon={Mail}
@@ -549,22 +781,12 @@ export function InvoicesManager({
                     <ActionButton
                       icon={Wallet}
                       label="Payment"
-                      onClick={() => {
-                        setPaymentInvoiceId(invoice.id);
-                        setPaymentAmount(
-                          String(
-                            Math.max(
-                              0,
-                              Number(invoice.total) - Number(invoice.amount_paid || 0),
-                            ).toFixed(3),
-                          ),
-                        );
-                      }}
+                      onClick={() => openPayment(invoice)}
                     />
                     <ActionButton
                       icon={History}
                       label="History"
-                      onClick={() => setHistoryInvoiceId(invoice.id)}
+                      onClick={() => openHistory(invoice)}
                     />
                     <ActionButton
                       icon={Trash2}
@@ -606,6 +828,7 @@ export function InvoicesManager({
                       <p className="font-medium text-navy">{invoice.invoice_number}</p>
                       <p className="text-xs text-navy/55">{invoice.client_name}</p>
                       <p className="mt-1 text-xs text-navy/45">
+                        {invoice.quotation_id ? "From quotation · " : ""}
                         {(invoice.invoice_items || []).length} lines ·{" "}
                         {(invoice.invoice_payments || []).length} payments
                       </p>
@@ -643,7 +866,7 @@ export function InvoicesManager({
                         <ActionButton
                           icon={FileText}
                           label="PDF"
-                          onClick={() => downloadInvoicePdf(invoice, logoUrl)}
+                          onClick={() => downloadPdf(invoice)}
                         />
                         <ActionButton
                           icon={Mail}
@@ -653,22 +876,12 @@ export function InvoicesManager({
                         <ActionButton
                           icon={Wallet}
                           label="Payment"
-                          onClick={() => {
-                            setPaymentInvoiceId(invoice.id);
-                            setPaymentAmount(
-                              String(
-                                Math.max(
-                                  0,
-                                  Number(invoice.total) - Number(invoice.amount_paid || 0),
-                                ).toFixed(3),
-                              ),
-                            );
-                          }}
+                          onClick={() => openPayment(invoice)}
                         />
                         <ActionButton
                           icon={History}
                           label="History"
-                          onClick={() => setHistoryInvoiceId(invoice.id)}
+                          onClick={() => openHistory(invoice)}
                         />
                         <ActionButton
                           icon={Trash2}
@@ -953,16 +1166,22 @@ export function InvoicesManager({
 
       <Modal
         open={Boolean(paymentInvoiceId)}
-        onClose={() => setPaymentInvoiceId(null)}
+        onClose={closePayment}
         title="Record payment"
+        description={
+          paymentInvoice
+            ? `${paymentInvoice.invoice_number} · part payments are allowed until the invoice is paid in full.`
+            : undefined
+        }
       >
         <form onSubmit={recordPayment} className="space-y-3">
+          {paymentInvoice ? <BalanceSummary invoice={paymentInvoice} /> : null}
           <label className={labelClass}>
             Amount
             <input
               required
               type="number"
-              step="0.001"
+              step="0.01"
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
               className={fieldClass}
@@ -999,19 +1218,25 @@ export function InvoicesManager({
               className={fieldClass}
             />
           </label>
-          {error ? (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          {paymentError ? (
+            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {paymentError}
+            </p>
           ) : null}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
-              onClick={() => setPaymentInvoiceId(null)}
+              onClick={closePayment}
               className={`flex-1 ${secondaryBtnClass}`}
             >
               Cancel
             </button>
-            <button type="submit" className={`flex-1 ${primaryBtnClass}`}>
-              Save payment
+            <button
+              type="submit"
+              disabled={paymentSaving}
+              className={`flex-1 ${primaryBtnClass}`}
+            >
+              {paymentSaving ? "Saving…" : "Save payment"}
             </button>
           </div>
         </form>
@@ -1019,22 +1244,66 @@ export function InvoicesManager({
 
       <Modal
         open={Boolean(historyInvoice)}
-        onClose={() => setHistoryInvoiceId(null)}
+        onClose={closeHistory}
         title={
           historyInvoice
-            ? `Activity · ${historyInvoice.invoice_number}`
-            : "Payment activity"
+            ? `Payments · ${historyInvoice.invoice_number}`
+            : "Payments"
         }
       >
-        {(historyInvoice?.invoice_payment_events || []).length === 0 &&
-        (historyInvoice?.invoice_payments || []).length === 0 ? (
-          <p className="text-sm text-navy/55">No payment activity yet.</p>
-        ) : (
-          <ul className="divide-y divide-mist">
-            {(historyInvoice?.invoice_payment_events || [])
-              .slice()
-              .sort((a, b) => b.created_at.localeCompare(a.created_at))
-              .map((event) => (
+        {historyInvoice ? <BalanceSummary invoice={historyInvoice} /> : null}
+        {paymentError ? (
+          <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {paymentError}
+          </p>
+        ) : null}
+
+        <div className="mt-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-navy/45">
+            Payments ({historyPayments.length})
+          </p>
+          {historyPayments.length === 0 ? (
+            <p className="text-sm text-navy/55">No payments recorded yet.</p>
+          ) : (
+            <ul className="divide-y divide-mist">
+              {historyPayments.map((payment) => (
+                <li
+                  key={payment.id}
+                  className="flex items-center justify-between gap-3 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium text-navy">
+                      {Number(payment.amount).toFixed(2)} {payment.currency}
+                    </p>
+                    <p className="text-xs text-navy/55">
+                      {payment.payment_date}
+                      {payment.method ? ` · ${methodLabel(payment.method)}` : ""}
+                    </p>
+                    {payment.notes ? (
+                      <p className="mt-1 text-xs text-navy/45">{payment.notes}</p>
+                    ) : null}
+                  </div>
+                  {historyInvoice ? (
+                    <ActionButton
+                      icon={Trash2}
+                      label="Delete"
+                      danger
+                      onClick={() => removePayment(payment, historyInvoice)}
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {historyEvents.length ? (
+          <div className="mt-4 border-t border-mist pt-4">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-navy/45">
+              Activity log
+            </p>
+            <ul className="divide-y divide-mist">
+              {historyEvents.map((event) => (
                 <li key={event.id} className="flex items-start justify-between gap-3 py-3 text-sm">
                   <div>
                     <p
@@ -1047,9 +1316,7 @@ export function InvoicesManager({
                     </p>
                     <p className="text-xs text-navy/55">
                       {event.payment_date || "-"}
-                      {event.method
-                        ? ` · ${PAYMENT_METHODS.find((m) => m.value === event.method)?.label || event.method}`
-                        : ""}
+                      {event.method ? ` · ${methodLabel(event.method)}` : ""}
                       {" · "}
                       {new Date(event.created_at).toLocaleString()}
                     </p>
@@ -1059,43 +1326,6 @@ export function InvoicesManager({
                   </div>
                 </li>
               ))}
-          </ul>
-        )}
-        {(historyInvoice?.invoice_payments || []).length ? (
-          <div className="mt-4 border-t border-mist pt-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-navy/45">
-              Active payments
-            </p>
-            <ul className="divide-y divide-mist">
-              {(historyInvoice?.invoice_payments || [])
-                .slice()
-                .sort((a, b) => b.payment_date.localeCompare(a.payment_date))
-                .map((payment) => (
-                  <li
-                    key={payment.id}
-                    className="flex items-center justify-between gap-3 py-3 text-sm"
-                  >
-                    <div>
-                      <p className="font-medium text-navy">
-                        {Number(payment.amount).toFixed(2)} {payment.currency}
-                      </p>
-                      <p className="text-xs text-navy/55">
-                        {payment.payment_date}
-                        {payment.method
-                          ? ` · ${PAYMENT_METHODS.find((m) => m.value === payment.method)?.label || payment.method}`
-                          : ""}
-                      </p>
-                    </div>
-                    {historyInvoice ? (
-                      <ActionButton
-                        icon={Trash2}
-                        label="Delete"
-                        danger
-                        onClick={() => removePayment(payment, historyInvoice)}
-                      />
-                    ) : null}
-                  </li>
-                ))}
             </ul>
           </div>
         ) : null}

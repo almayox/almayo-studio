@@ -55,7 +55,32 @@ export default async function ReviewPage({ params }: Props) {
   if (passwordRequired) {
     const cookieStore = await cookies();
     const cookie = cookieStore.get(reviewCookieName(token))?.value;
-    initialUnlocked = verifyReviewAccessValue(cookie, token);
+    initialUnlocked = verifyReviewAccessValue(
+      cookie,
+      token,
+      campaign.review_password_hash ?? "",
+    );
+  }
+
+  // Locked: send only the title and the password form. No assets, comments,
+  // objectives or signed file links leave the server until the cookie is valid.
+  if (!initialUnlocked) {
+    return (
+      <div className="mx-auto max-w-5xl px-5 pb-24 pt-32 sm:px-6">
+        <CampaignReviewClient
+          token={token}
+          title={campaign.title}
+          objectives={null}
+          platforms={null}
+          assets={[]}
+          comments={[]}
+          alreadyDecided={false}
+          decision={null}
+          passwordRequired
+          initialUnlocked={false}
+        />
+      </div>
+    );
   }
 
   const assets = (campaign.campaign_assets || []).sort(

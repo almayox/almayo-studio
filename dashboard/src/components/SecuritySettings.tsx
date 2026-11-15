@@ -23,6 +23,8 @@ export function SecuritySettings() {
   }
 
   useEffect(() => {
+    // Loads the factor list once on mount; state is set after the request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshFactors();
   }, []);
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
 import { Modal } from "@/components/ui/Modal";
@@ -18,11 +19,11 @@ import {
   ActionGroup,
 } from "@/components/ui/PageChrome";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { Pencil, Trash2 } from "lucide-react";
+import { FolderOpen, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import { StorageImage } from "@/components/StorageMedia";
-import type { ClientStats } from "@/lib/types";
+import type { ClientProjectSummary, ClientStats } from "@/lib/types";
 import { slugify } from "@/lib/types";
 
 const emptyForm = {
@@ -35,7 +36,17 @@ const emptyForm = {
   logoUrl: "",
 };
 
+function groupByCatalog(projects: ClientProjectSummary[]) {
+  const groups = new Map<string, ClientProjectSummary[]>();
+  for (const project of projects) {
+    const key = project.catalog_name || "Uncategorized";
+    groups.set(key, [...(groups.get(key) || []), project]);
+  }
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
 export function ClientsManager({ initialClients }: { initialClients: ClientStats[] }) {
+  const [openProjectsFor, setOpenProjectsFor] = useState<string | null>(null);
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -237,7 +248,8 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
             </thead>
             <tbody className="divide-y divide-mist">
               {pagination.pageItems.map((client) => (
-                <tr key={client.id} className="hover:bg-foam/40">
+                <Fragment key={client.id}>
+                <tr className="hover:bg-foam/40">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {client.logo_url ? (
@@ -276,6 +288,15 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
                   <td className="px-4 py-3">
                     <ActionGroup>
                       <ActionButton
+                        icon={FolderOpen}
+                        label="Projects"
+                        onClick={() =>
+                          setOpenProjectsFor((current) =>
+                            current === client.id ? null : client.id,
+                          )
+                        }
+                      />
+                      <ActionButton
                         icon={Pencil}
                         label="Edit"
                         onClick={() => startEdit(client)}
@@ -289,6 +310,54 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
                     </ActionGroup>
                   </td>
                 </tr>
+                {openProjectsFor === client.id ? (
+                  <tr className="bg-foam/50">
+                    <td colSpan={4} className="px-4 py-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-navy">
+                          Projects for {client.name}
+                        </p>
+                        <Link
+                          href={`/projects/new?client=${client.id}`}
+                          className={secondaryBtnClass}
+                        >
+                          Add project
+                        </Link>
+                      </div>
+                      {(client.projects || []).length === 0 ? (
+                        <p className="mt-3 text-sm text-navy/55">
+                          No projects yet for this client.
+                        </p>
+                      ) : (
+                        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {groupByCatalog(client.projects || []).map(([catalog, items]) => (
+                            <div key={catalog}>
+                              <p className="text-xs font-medium uppercase tracking-wide text-navy/45">
+                                {catalog}
+                              </p>
+                              <ul className="mt-1.5 space-y-1">
+                                {items.map((project) => (
+                                  <li key={project.id} className="text-sm">
+                                    <Link
+                                      href={`/projects/${project.id}`}
+                                      className="text-navy hover:underline"
+                                    >
+                                      {project.title}
+                                    </Link>
+                                    {project.is_visible ? null : (
+                                      <span className="ml-2 text-xs text-amber-700">Draft</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -366,8 +435,7 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
             />
           </label>
           {form.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={form.logoUrl} alt="" className="h-12 w-auto object-contain" />
+            <StorageImage src={form.logoUrl} alt="" className="h-12 w-auto object-contain" />
           ) : null}
           <DropUpload
             onFiles={uploadLogo}

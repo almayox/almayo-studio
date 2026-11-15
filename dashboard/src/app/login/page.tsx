@@ -1,9 +1,19 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+function UnauthorizedNotice() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("error") !== "unauthorized") return null;
+  return (
+    <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+      This account is not authorised to use the dashboard.
+    </p>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -56,6 +66,10 @@ export default function LoginPage() {
           Almayo Studio
         </h1>
         <p className="mt-2 text-sm text-navy/60">Sign in to manage portfolio content.</p>
+
+        <Suspense fallback={null}>
+          <UnauthorizedNotice />
+        </Suspense>
 
         <label className="mt-8 block text-sm font-medium text-navy">
           Email

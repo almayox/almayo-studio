@@ -24,6 +24,14 @@ export default async function EditProjectPage({ params }: Props) {
         .order("sort_order", { ascending: true }),
     ]);
 
+  const { data: contracts } = await supabase
+    .from("contracts")
+    .select("status, created_at")
+    .eq("project_id", id)
+    .order("created_at", { ascending: false });
+  const contractStatus =
+    contracts?.find((c) => c.status === "signed")?.status ?? contracts?.[0]?.status ?? null;
+
   if (!project) notFound();
 
   return (
@@ -40,6 +48,7 @@ export default async function EditProjectPage({ params }: Props) {
           clients={(clients as Client[]) ?? []}
           project={project as Project}
           media={(media as ProjectMedia[]) ?? []}
+          contractStatus={contractStatus}
         />
       </div>
     </div>

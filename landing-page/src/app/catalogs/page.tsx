@@ -59,11 +59,13 @@ export default async function CatalogsPage() {
             ))}
           </RevealStagger>
         ) : (
-          <div className="mt-12 rounded-2xl border border-dashed border-mist bg-white px-6 py-16 text-center">
-            <p className="font-[family-name:var(--font-display)] text-xl text-navy">
-              Catalogs will appear here
-            </p>
-          </div>
+          <p className="mt-12 text-navy/65">
+            New work is on its way.{" "}
+            <Link href="/contact" className="font-medium text-navy underline underline-offset-4">
+              Get in touch
+            </Link>{" "}
+            to see recent projects.
+          </p>
         )}
       </div>
     </>

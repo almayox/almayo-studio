@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { RemoteImage } from "@/components/RemoteImage";
 import { Reveal } from "@/components/Reveal";
 import { getProjectBySlug } from "@/lib/data";
+import { richTextToPlain, sanitizeRichText } from "@/lib/sanitize";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -13,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!project) return { title: "Project" };
   return {
     title: project.title,
-    description: project.description ?? undefined,
+    description: richTextToPlain(project.description, 160) || undefined,
   };
 }
 
@@ -21,6 +22,9 @@ export default async function ProjectDetailPage({ params }: Props) {
   const { slug } = await params;
   const { project, media } = await getProjectBySlug(slug);
   if (!project) notFound();
+
+  // Stored rich text is cleaned before it is placed in the page.
+  const description = sanitizeRichText(project.description);
 
   const tags = (project.tags || "")
     .split(",")
@@ -45,10 +49,21 @@ export default async function ProjectDetailPage({ params }: Props) {
           <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-navy sm:text-5xl">
             {project.title}
           </h1>
-          {project.description ? (
+          {project.clients?.name ? (
+            <p className="mt-3 text-sm text-navy/60">
+              Client:{" "}
+              <Link
+                href={`/clients/${project.clients.slug}`}
+                className="font-medium text-navy hover:underline"
+              >
+                {project.clients.name}
+              </Link>
+            </p>
+          ) : null}
+          {description ? (
             <div
               className="prose prose-sm mt-5 max-w-none text-navy/70"
-              dangerouslySetInnerHTML={{ __html: project.description }}
+              dangerouslySetInnerHTML={{ __html: description }}
             />
           ) : null}
           {tags.length ? (
@@ -70,6 +85,9 @@ export default async function ProjectDetailPage({ params }: Props) {
             <RemoteImage
               src={project.thumbnail_url}
               alt={project.title}
+              fill
+              priority
+              sizes="(min-width: 1152px) 1104px, 100vw"
               className="h-full w-full object-cover"
               style={{ objectPosition: project.thumbnail_position ?? "50% 50%" }}
             />
@@ -85,11 +103,19 @@ export default async function ProjectDetailPage({ params }: Props) {
                 className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-navy/5"
               >
                 {item.media_type === "video" ? (
-                  <video src={item.url} controls className="h-full w-full object-cover" />
+                  <video
+                    src={`${item.url}#t=0.1`}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <RemoteImage
                     src={item.url}
                     alt={item.caption || project.title}
+                    fill
+                    sizes="(min-width: 1152px) 544px, (min-width: 640px) 50vw, 100vw"
                     className="h-full w-full object-cover"
                   />
                 )}

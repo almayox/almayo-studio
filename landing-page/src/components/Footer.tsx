@@ -15,11 +15,13 @@ export function Footer({
   tagline,
   whatsappNumber,
   socialLinks = [],
+  hasResume = false,
 }: {
   siteName: string;
   tagline: string;
   whatsappNumber: string;
   socialLinks?: SocialLink[];
+  hasResume?: boolean;
 }) {
   return (
     <footer className="relative overflow-hidden bg-navy-deep text-white">
@@ -55,7 +57,7 @@ export function Footer({
               Explore
             </p>
             <div className="flex flex-col gap-2.5 text-white/75">
-              <Link href="/projects" className="hover:text-white">
+              <Link href="/catalogs" className="hover:text-white">
                 Work
               </Link>
               <Link href="/clients" className="hover:text-white">
@@ -64,11 +66,16 @@ export function Footer({
               <Link href="/about" className="hover:text-white">
                 About
               </Link>
-              <Link href="/resume" className="hover:text-white">
-                Resume
-              </Link>
+              {hasResume ? (
+                <Link href="/resume" className="hover:text-white">
+                  Resume
+                </Link>
+              ) : null}
               <Link href="/contact" className="hover:text-white">
                 Contact
+              </Link>
+              <Link href="/privacy" className="hover:text-white">
+                Privacy
               </Link>
             </div>
           </div>

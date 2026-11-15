@@ -6,6 +6,7 @@ import { DropUpload } from "@/components/DropUpload";
 import { createClient } from "@/lib/supabase/client";
 import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import type { AboutContent, LogoVariant, SiteSettings } from "@/lib/types";
+import { StorageImage } from "@/components/StorageMedia";
 
 const NAVBAR_LOGOS = [
   {
@@ -192,8 +193,7 @@ function AssetSlot({
         }`}
       >
         {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <StorageImage
             src={preview}
             alt={title}
             className={`${previewHeight} w-auto max-w-full object-contain`}
@@ -206,7 +206,7 @@ function AssetSlot({
       </div>
       <DropUpload
         onFiles={onFiles}
-        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        accept="image/png,image/jpeg,image/webp"
         disabled={busy}
         className={dropClass}
       >

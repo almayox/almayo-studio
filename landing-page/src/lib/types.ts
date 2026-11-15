@@ -32,8 +32,6 @@ export type Client = {
   slug: string;
   logo_url: string | null;
   website_url: string | null;
-  email: string | null;
-  phone: string | null;
   description: string | null;
   work_types: string | null;
   is_visible: boolean;
@@ -101,4 +99,6 @@ export type SocialLink = {
 
 export type ProjectWithCatalog = Project & {
   catalogs: Pick<Catalog, "id" | "name" | "slug"> | null;
+  /** Present only when the client is public (visible). */
+  clients?: Pick<Client, "name" | "slug"> | null;
 };
