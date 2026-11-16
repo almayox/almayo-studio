@@ -31,7 +31,23 @@ export function SecuritySettings() {
   async function startEnroll() {
     setError(null);
     setMessage(null);
+    setVerifyCode("");
     const supabase = createClient();
+
+    // A setup that was started but never confirmed leaves an unverified factor
+    // behind, which blocks a new one. Clear those first so setup can restart.
+    const { data: existing } = await supabase.auth.mfa.listFactors();
+    const unfinished = (existing?.all ?? []).filter(
+      (f) => f.factor_type === "totp" && f.status !== "verified",
+    );
+    for (const factor of unfinished) {
+      const { error: clearError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      if (clearError) {
+        setError("Could not clear the unfinished setup. Please try again.");
+        return;
+      }
+    }
+
     const { data, error: enrollError } = await supabase.auth.mfa.enroll({
       factorType: "totp",
       friendlyName: "Authenticator app",
@@ -43,12 +59,27 @@ export function SecuritySettings() {
     setFactorId(data.id);
     setQr(data.totp?.qr_code || null);
     setSecret(data.totp?.secret || null);
-    setMessage("Scan the QR code, then enter a code to finish setup.");
+    setMessage(null);
+  }
+
+  async function cancelEnroll() {
+    setError(null);
+    setMessage(null);
+    const supabase = createClient();
+    if (factorId) await supabase.auth.mfa.unenroll({ factorId });
+    setFactorId(null);
+    setQr(null);
+    setSecret(null);
+    setVerifyCode("");
   }
 
   async function confirmEnroll() {
     if (!factorId) return;
     setError(null);
+    if (!/^\d{6}$/.test(verifyCode.trim())) {
+      setError("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
     const supabase = createClient();
     const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
       factorId,
@@ -114,6 +145,15 @@ export function SecuritySettings() {
 
       {qr ? (
         <div className="space-y-3 rounded-xl border border-mist bg-foam p-4">
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-navy/70">
+            <li>Open your authenticator app and add a new account.</li>
+            <li>Scan this QR code, or type the manual key.</li>
+            <li>Enter the 6-digit code the app shows, then confirm.</li>
+          </ol>
+          <p className="text-xs text-navy/60">
+            On iPhone Passwords: save this dashboard login first, open it, then choose
+            &ldquo;Set Up Verification Code&rdquo;.
+          </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qr} alt="Authenticator QR code" className="h-48 w-48 rounded-lg bg-white p-2" />
           {secret ? (
@@ -125,14 +165,24 @@ export function SecuritySettings() {
             Verification code
             <input
               value={verifyCode}
-              onChange={(e) => setVerifyCode(e.target.value)}
+              onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               className="control mt-1.5 w-full max-w-xs"
               placeholder="000000"
+              inputMode="numeric"
+              autoComplete="one-time-code"
             />
           </label>
-          <button type="button" onClick={confirmEnroll} className="btn-primary">
-            Confirm and enable 2FA
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={confirmEnroll} className="btn-primary">
+              Confirm and enable 2FA
+            </button>
+            <button type="button" onClick={startEnroll} className="btn-secondary">
+              Generate a new code
+            </button>
+            <button type="button" onClick={cancelEnroll} className="btn-secondary">
+              Cancel
+            </button>
+          </div>
         </div>
       ) : null}
 
