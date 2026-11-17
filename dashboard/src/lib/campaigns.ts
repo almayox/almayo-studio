@@ -33,6 +33,23 @@ export const CAMPAIGN_STATUS_OPTIONS = [
 
 export const ASSET_APPROVAL_STATUSES = ["pending", "approved", "changes_requested"];
 
+/** Values the client review page saved before it used "changes_requested". */
+const LEGACY_APPROVAL: Record<string, string> = {
+  revision_requested: "changes_requested",
+  rejected: "changes_requested",
+};
+
+/** Maps old approval values on loaded campaigns to the ones this screen knows. */
+export function withCurrentApprovalStatuses(campaigns: CampaignRow[]): CampaignRow[] {
+  return campaigns.map((campaign) => ({
+    ...campaign,
+    campaign_assets: campaign.campaign_assets?.map((asset) => ({
+      ...asset,
+      approval_status: LEGACY_APPROVAL[asset.approval_status] ?? asset.approval_status,
+    })),
+  }));
+}
+
 export type AssetType = "single" | "carousel" | "video" | "reel" | "story";
 
 export const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [

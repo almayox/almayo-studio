@@ -13,11 +13,34 @@ type Asset = {
   id: string;
   title: string;
   caption: string | null;
+  hashtags: string | null;
+  publish_date: string | null;
   media_url: string | null;
   approval_status: string;
   type: string;
   campaign_asset_slides?: Slide[];
 };
+
+const TYPE_LABELS: Record<string, string> = {
+  single: "Single post",
+  carousel: "Carousel",
+  reel: "Reel",
+  video: "Video",
+  story: "Story",
+};
+
+const APPROVAL_LABELS: Record<string, string> = {
+  pending: "Waiting for your review",
+  approved: "Approved",
+  changes_requested: "Changes requested",
+};
+
+/** Signed links keep the file name, so the extension tells a video from an image. */
+function isVideoUrl(url: string) {
+  return /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
+}
+
+const mediaClass = "aspect-square w-full object-cover";
 
 type Comment = {
   id: string;
@@ -41,12 +64,12 @@ function AssetMedia({ asset }: { asset: Asset }) {
     const slide = slides[Math.min(index, slides.length - 1)];
     return (
       <div className="overflow-hidden rounded-xl bg-foam">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={slide.media_url}
-          alt={slide.caption || asset.title}
-          className="aspect-square w-full object-cover"
-        />
+        {isVideoUrl(slide.media_url) ? (
+          <video key={slide.id} src={slide.media_url} controls playsInline className={mediaClass} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={slide.media_url} alt={slide.caption || asset.title} className={mediaClass} />
+        )}
         {slides.length > 1 ? (
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <button
@@ -83,9 +106,9 @@ function AssetMedia({ asset }: { asset: Asset }) {
     );
   }
 
-  if (asset.type === "video") {
+  if (asset.type === "video" || asset.type === "reel" || isVideoUrl(asset.media_url)) {
     return (
-      <video src={asset.media_url} controls className="aspect-square w-full rounded-xl object-cover" />
+      <video src={asset.media_url} controls playsInline className={`${mediaClass} rounded-xl`} />
     );
   }
 
@@ -288,17 +311,23 @@ export function CampaignReviewClient({
                   <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">
                     {asset.title}
                   </h2>
+                  <p className="mt-1 text-xs text-navy/55">
+                    {TYPE_LABELS[asset.type] || asset.type}
+                    {asset.publish_date ? ` · Planned for ${asset.publish_date}` : ""}
+                  </p>
                   {asset.caption ? (
-                    <p className="mt-2 text-sm text-navy/65">{asset.caption}</p>
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-navy/70">{asset.caption}</p>
                   ) : null}
-                  <p className="mt-2 text-xs uppercase tracking-wide text-navy/45">
-                    Status: {asset.approval_status}
+                  {asset.hashtags ? (
+                    <p className="mt-2 text-sm text-navy/55">{asset.hashtags}</p>
+                  ) : null}
+                  <p className="mt-3 text-xs uppercase tracking-wide text-navy/45">
+                    {APPROVAL_LABELS[asset.approval_status] || asset.approval_status}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {[
                       ["approved", "Approve"],
-                      ["revision_requested", "Request changes"],
-                      ["rejected", "Reject"],
+                      ["changes_requested", "Request changes"],
                     ].map(([value, label]) => (
                       <button
                         key={value}

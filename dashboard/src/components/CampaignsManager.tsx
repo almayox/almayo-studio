@@ -110,8 +110,6 @@ export function CampaignsManager({
         </p>
       ) : null}
 
-      {errorNotice}
-
       <ListFilters
         search={search}
         onSearchChange={setSearch}
@@ -194,9 +192,7 @@ export function CampaignsManager({
         </div>
       )}
 
-      {error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-      ) : null}
+      {errorNotice}
 
       {form ? (
         <CampaignForm

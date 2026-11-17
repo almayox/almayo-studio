@@ -4,7 +4,7 @@ import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rat
 import { assertReviewAccess } from "@/lib/reviewAccess";
 import { getReviewCampaignByToken } from "@/lib/reviewServer";
 
-const ALLOWED = new Set(["approved", "revision_requested", "rejected"]);
+const ALLOWED = new Set(["approved", "changes_requested"]);
 
 export async function POST(
   request: Request,

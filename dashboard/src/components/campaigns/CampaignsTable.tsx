@@ -68,7 +68,7 @@ export function CampaignsTable({
               >
                 {CAMPAIGN_STATUS_OPTIONS.map((status) => (
                   <option key={status.value} value={status.value}>
-                    {status.value}
+                    {status.label}
                   </option>
                 ))}
               </select>

@@ -1,6 +1,7 @@
 import { CampaignsManager } from "@/components/CampaignsManager";
 import { createClient } from "@/lib/supabase/server";
-import type { Campaign, Client } from "@/lib/types";
+import { withCurrentApprovalStatuses, type CampaignRow } from "@/lib/campaigns";
+import type { Client } from "@/lib/types";
 
 export const metadata = { title: "Campaigns" };
 
@@ -43,7 +44,7 @@ export default async function CampaignsPage() {
 
   return (
     <CampaignsManager
-      initialCampaigns={(campaigns as Campaign[]) ?? []}
+      initialCampaigns={withCurrentApprovalStatuses((campaigns as CampaignRow[]) ?? [])}
       clients={(clients as Client[]) ?? []}
       projects={(projects as { id: string; title: string }[]) ?? []}
       fetchError={fetchError}
