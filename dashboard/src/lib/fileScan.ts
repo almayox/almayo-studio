@@ -69,7 +69,7 @@ export function validateUploadBasics(file: File, maxBytes: number): ScanResult {
   return { ok: true, mime: mime || "application/octet-stream" };
 }
 
-export async function detectMime(buffer: Uint8Array) {
+async function detectMime(buffer: Uint8Array) {
   const { fileTypeFromBuffer } = await import("file-type");
   const detected = await fileTypeFromBuffer(buffer);
   return detected?.mime || null;

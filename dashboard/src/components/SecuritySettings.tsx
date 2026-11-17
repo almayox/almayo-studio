@@ -119,16 +119,16 @@ export function SecuritySettings() {
   }
 
   if (loading) {
-    return <p className="text-sm text-navy/60">Loading security settings…</p>;
+    return <p className="text-sm text-fg/60">Loading security settings…</p>;
   }
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">
+        <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">
           Two-factor authentication
         </h2>
-        <p className="mt-1 text-sm text-navy/60">
+        <p className="mt-1 text-sm text-fg/60">
           Protect your dashboard with a code from an authenticator app (Google Authenticator, 1Password, Authy).
         </p>
       </div>
@@ -144,24 +144,24 @@ export function SecuritySettings() {
       )}
 
       {qr ? (
-        <div className="space-y-3 rounded-xl border border-mist bg-foam p-4">
-          <ol className="list-decimal space-y-1 pl-5 text-sm text-navy/70">
+        <div className="space-y-3 rounded-xl border border-line bg-subtle p-4">
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-fg/70">
             <li>Open your authenticator app and add a new account.</li>
             <li>Scan this QR code, or type the manual key.</li>
             <li>Enter the 6-digit code the app shows, then confirm.</li>
           </ol>
-          <p className="text-xs text-navy/60">
+          <p className="text-xs text-fg/60">
             On iPhone Passwords: save this dashboard login first, open it, then choose
             &ldquo;Set Up Verification Code&rdquo;.
           </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qr} alt="Authenticator QR code" className="h-48 w-48 rounded-lg bg-white p-2" />
           {secret ? (
-            <p className="text-xs text-navy/60">
-              Manual key: <span className="font-mono text-navy">{secret}</span>
+            <p className="text-xs text-fg/60">
+              Manual key: <span className="font-mono text-fg">{secret}</span>
             </p>
           ) : null}
-          <label className="block text-sm font-medium text-navy">
+          <label className="block text-sm font-medium text-fg">
             Verification code
             <input
               value={verifyCode}

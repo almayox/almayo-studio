@@ -173,9 +173,9 @@ export function CatalogsManager({ initialCatalogs }: { initialCatalogs: CatalogW
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-mist bg-white">
+        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
+            <thead className="border-b border-line bg-subtle text-xs uppercase tracking-wide text-fg/60">
               <tr>
                 <th className="px-4 py-3 font-medium">Icon</th>
                 <th className="px-4 py-3 font-medium">Name</th>
@@ -184,15 +184,15 @@ export function CatalogsManager({ initialCatalogs }: { initialCatalogs: CatalogW
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-mist">
+            <tbody className="divide-y divide-line">
               {pagination.pageItems.map((catalog) => {
                 const CatalogIcon = resolveCatalogIcon(
                   isCatalogIconUrl(catalog.icon) ? null : catalog.icon,
                 );
                 return (
-                <tr key={catalog.id} className="align-middle hover:bg-foam/40">
+                <tr key={catalog.id} className="align-middle hover:bg-subtle/40">
                   <td className="px-4 py-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy/5 text-navy">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fg/5 text-fg">
                       {isCatalogIconUrl(catalog.icon) ? (
                         <StorageImage
                           src={catalog.icon!}
@@ -209,19 +209,19 @@ export function CatalogsManager({ initialCatalogs }: { initialCatalogs: CatalogW
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-navy">{catalog.name}</p>
-                    <p className="text-xs text-navy/45">/{catalog.slug}</p>
+                    <p className="font-medium text-fg">{catalog.name}</p>
+                    <p className="text-xs text-fg/45">/{catalog.slug}</p>
                     {catalog.description ? (
-                      <p className="mt-1 line-clamp-1 text-xs text-navy/50">
+                      <p className="mt-1 line-clamp-1 text-xs text-fg/50">
                         {catalog.description}
                       </p>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 text-navy/70">
-                    <span className="font-medium tabular-nums text-navy">
+                  <td className="px-4 py-3 text-fg/70">
+                    <span className="font-medium tabular-nums text-fg">
                       {catalog.project_count}
                     </span>
-                    <span className="text-xs text-navy/45">
+                    <span className="text-xs text-fg/45">
                       {" "}
                       project{catalog.project_count === 1 ? "" : "s"}
                     </span>

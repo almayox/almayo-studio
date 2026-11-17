@@ -33,18 +33,18 @@ export function ThumbnailPositionPicker({
   return (
     <div className="mt-3">
       <div className="mb-1.5 flex items-center justify-between">
-        <p className="text-xs font-medium text-navy/55">Drag to reposition thumbnail</p>
+        <p className="text-xs font-medium text-fg/55">Drag to reposition thumbnail</p>
         <button
           type="button"
           onClick={() => onChange("50% 50%")}
-          className="text-[11px] text-navy/50 underline hover:text-navy"
+          className="text-[11px] text-fg/50 underline hover:text-fg"
         >
           Reset center
         </button>
       </div>
       <div
         ref={containerRef}
-        className="relative h-40 cursor-crosshair select-none overflow-hidden rounded-xl border border-mist"
+        className="relative h-40 cursor-crosshair select-none overflow-hidden rounded-xl border border-line"
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
           const p = getPct(e);

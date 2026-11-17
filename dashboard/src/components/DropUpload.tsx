@@ -30,7 +30,7 @@ export function DropUpload({
   return (
     <label
       className={`${className} ${
-        isDragging ? "border-navy bg-navy/5 ring-2 ring-navy/30" : ""
+        isDragging ? "border-fg bg-fg/5 ring-2 ring-fg/30" : ""
       } ${disabled ? "pointer-events-none opacity-60" : "cursor-pointer"}`}
       onDragEnter={(e) => {
         stop(e);

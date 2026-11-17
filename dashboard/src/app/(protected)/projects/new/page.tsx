@@ -17,10 +17,10 @@ export default async function NewProjectPage({ searchParams }: Props) {
 
   return (
     <div>
-      <Link href="/projects" className="text-sm text-navy/55 hover:text-navy">
+      <Link href="/projects" className="text-sm text-fg/55 hover:text-fg">
         ← Back to projects
       </Link>
-      <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-navy">
+      <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-fg">
         New project
       </h1>
       <div className="mt-8">

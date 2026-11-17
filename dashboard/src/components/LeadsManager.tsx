@@ -304,8 +304,8 @@ export function LeadsManager({ initialLeads }: { initialLeads: Lead[] }) {
             onClick={() => setFilter(stage)}
             className={`rounded-full px-3 py-1 text-xs font-medium border transition ${
               filter === stage
-                ? "border-navy bg-navy text-white"
-                : "border-mist bg-white text-navy/65 hover:bg-foam"
+                ? "border-fg bg-fg text-canvas"
+                : "border-line bg-surface text-fg/65 hover:bg-subtle"
             }`}
           >
             {stage}
@@ -318,23 +318,23 @@ export function LeadsManager({ initialLeads }: { initialLeads: Lead[] }) {
       ) : (
         <>
           {/* Mobile cards */}
-          <div className="overflow-hidden rounded-2xl border border-mist bg-white md:hidden">
+          <div className="overflow-hidden rounded-2xl border border-line bg-surface md:hidden">
             <div className="space-y-3 p-4">
             {pagination.pageItems.map((lead) => (
               <article
                 key={lead.id}
-                className="rounded-2xl border border-mist bg-white p-4"
+                className="rounded-2xl border border-line bg-surface p-4"
               >
-                <p className="font-medium text-navy">{lead.full_name}</p>
-                <p className="text-xs text-navy/55">{lead.email}</p>
+                <p className="font-medium text-fg">{lead.full_name}</p>
+                <p className="text-xs text-fg/55">{lead.email}</p>
                 {lead.phone ? (
-                  <p className="text-xs text-navy/45">{lead.phone}</p>
+                  <p className="text-xs text-fg/45">{lead.phone}</p>
                 ) : null}
-                <p className="mt-2 text-xs text-navy/60">
+                <p className="mt-2 text-xs text-fg/60">
                   {lead.service_interested || "-"}
                 </p>
                 {lead.notes ? (
-                  <p className="mt-2 rounded-lg bg-foam px-2 py-1.5 text-xs text-navy/70">
+                  <p className="mt-2 rounded-lg bg-subtle px-2 py-1.5 text-xs text-fg/70">
                     Notes: {lead.notes}
                   </p>
                 ) : null}
@@ -385,9 +385,9 @@ export function LeadsManager({ initialLeads }: { initialLeads: Lead[] }) {
           </div>
 
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-2xl border border-mist bg-white md:block">
+          <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface md:block">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
+              <thead className="border-b border-line bg-subtle text-xs uppercase tracking-wide text-fg/60">
                 <tr>
                   <th className="px-4 py-3 font-medium">Lead</th>
                   <th className="px-4 py-3 font-medium">Service</th>
@@ -395,25 +395,25 @@ export function LeadsManager({ initialLeads }: { initialLeads: Lead[] }) {
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-mist">
+              <tbody className="divide-y divide-line">
                 {pagination.pageItems.map((lead) => (
-                  <tr key={lead.id} className="align-top hover:bg-foam/40">
+                  <tr key={lead.id} className="align-top hover:bg-subtle/40">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-navy">{lead.full_name}</p>
-                      <p className="text-xs text-navy/55">{lead.email}</p>
+                      <p className="font-medium text-fg">{lead.full_name}</p>
+                      <p className="text-xs text-fg/55">{lead.email}</p>
                       {lead.phone ? (
-                        <p className="text-xs text-navy/45">{lead.phone}</p>
+                        <p className="text-xs text-fg/45">{lead.phone}</p>
                       ) : null}
                       {lead.message ? (
-                        <p className="mt-1 max-w-sm text-xs text-navy/60">{lead.message}</p>
+                        <p className="mt-1 max-w-sm text-xs text-fg/60">{lead.message}</p>
                       ) : null}
                       {lead.notes ? (
-                        <p className="mt-1 max-w-sm rounded-md bg-foam px-2 py-1 text-xs text-navy/65">
+                        <p className="mt-1 max-w-sm rounded-md bg-subtle px-2 py-1 text-xs text-fg/65">
                           Notes: {lead.notes}
                         </p>
                       ) : null}
                     </td>
-                    <td className="px-4 py-3 text-navy/70">
+                    <td className="px-4 py-3 text-fg/70">
                       {lead.service_interested || "-"}
                     </td>
                     <td className="px-4 py-3">

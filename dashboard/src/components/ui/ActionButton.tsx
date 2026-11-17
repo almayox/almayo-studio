@@ -3,10 +3,10 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
-export const actionBtnClass =
-  "inline-flex h-[var(--control-h)] w-[var(--control-h)] shrink-0 items-center justify-center rounded-lg border border-mist bg-white text-navy transition hover:border-navy/25 hover:bg-foam disabled:opacity-40";
+const actionBtnClass =
+  "inline-flex h-[var(--control-h)] w-[var(--control-h)] shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-fg transition hover:border-fg/25 hover:bg-subtle disabled:opacity-40";
 
-export const actionBtnDangerClass =
+const actionBtnDangerClass =
   "inline-flex h-[var(--control-h)] w-[var(--control-h)] shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 disabled:opacity-40";
 
 export function ActionGroup({ children }: { children: React.ReactNode }) {

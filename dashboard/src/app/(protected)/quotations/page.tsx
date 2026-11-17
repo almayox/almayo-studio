@@ -1,4 +1,5 @@
-import { QuotationsManager, type QuotationRow } from "@/components/QuotationsManager";
+import { QuotationsManager } from "@/components/QuotationsManager";
+import type { QuotationRow } from "@/lib/quotations";
 import { PageHeader } from "@/components/ui/PageChrome";
 import { createClient } from "@/lib/supabase/server";
 import type { Client, LogoVariant, Project } from "@/lib/types";

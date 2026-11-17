@@ -71,13 +71,13 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-navy-deep via-navy to-[#163566] px-5">
+    <div className="flex min-h-screen items-center justify-center app-backdrop px-5">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl shadow-black/20"
+        className="w-full max-w-md glass rounded-2xl border border-line p-8 shadow-2xl shadow-black/40"
       >
-        <p className="text-xs font-medium uppercase tracking-[0.22em] text-navy/45">Admin</p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl text-navy">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] text-fg/45">Admin</p>
+        <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl text-fg">
           Set new password
         </h1>
 
@@ -89,29 +89,29 @@ export default function ResetPasswordPage() {
             </Link>
           </p>
         ) : !ready ? (
-          <p className="mt-6 text-sm text-navy/60">
+          <p className="mt-6 text-sm text-fg/60">
             Open this page from the email reset link. If you already did, wait a moment…
           </p>
         ) : (
           <>
-            <label className="mt-8 block text-sm font-medium text-navy">
+            <label className="mt-8 block text-sm font-medium text-fg">
               New password
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-mist bg-foam px-3 py-2.5 outline-none ring-navy/30 focus:ring-2"
+                className="control mt-1.5 w-full "
               />
             </label>
-            <label className="mt-4 block text-sm font-medium text-navy">
+            <label className="mt-4 block text-sm font-medium text-fg">
               Confirm password
               <input
                 type="password"
                 required
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-mist bg-foam px-3 py-2.5 outline-none ring-navy/30 focus:ring-2"
+                className="control mt-1.5 w-full "
               />
             </label>
             {error ? (
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
           </>
         )}
 
-        <Link href="/login" className="mt-4 block text-center text-sm text-navy/60 hover:text-navy">
+        <Link href="/login" className="mt-4 block text-center text-sm text-fg/60 hover:text-fg">
           Back to login
         </Link>
       </form>

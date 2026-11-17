@@ -1,6 +1,6 @@
 "use client";
 
-import { controlClass, filterLabelClass } from "@/components/ui/PageChrome";
+import { fieldClass, filterLabelClass } from "@/components/ui/PageChrome";
 
 export type FilterOption = { value: string; label: string };
 
@@ -26,7 +26,7 @@ export function ListFilters({
   extra,
 }: ListFiltersProps) {
   return (
-    <div className="mb-4 rounded-xl border border-mist bg-white p-3">
+    <div className="mb-4 rounded-xl border border-line bg-surface p-3">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9.5rem] sm:items-end lg:grid-cols-[minmax(0,1fr)_9.5rem_auto]">
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className={filterLabelClass}>Search</span>
@@ -34,7 +34,7 @@ export function ListFilters({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className={controlClass}
+            className={fieldClass}
           />
         </label>
         {statusOptions && onStatusChange ? (
@@ -43,7 +43,7 @@ export function ListFilters({
             <select
               value={status ?? "all"}
               onChange={(e) => onStatusChange(e.target.value)}
-              className={controlClass}
+              className={fieldClass}
             >
               <option value="all">All</option>
               {statusOptions.map((opt) => (

@@ -379,21 +379,21 @@ export function ContractsManager({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-mist bg-white">
+        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
+            <thead className="border-b border-line bg-subtle text-xs uppercase tracking-wide text-fg/60">
               <tr>
                 <th className="px-4 py-3 font-medium">Contract</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-mist">
+            <tbody className="divide-y divide-line">
               {pagination.pageItems.map((contract) => (
-                <tr key={contract.id} className="align-top hover:bg-foam/40">
+                <tr key={contract.id} className="align-top hover:bg-subtle/40">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-navy">{contract.title}</p>
-                    <p className="text-xs text-navy/50">
+                    <p className="font-medium text-fg">{contract.title}</p>
+                    <p className="text-xs text-fg/50">
                       {contract.clients?.name || "No client"} ·{" "}
                       {contract.contract_milestones?.length || 0} milestone(s)
                     </p>
@@ -403,7 +403,7 @@ export function ContractsManager({
                       </p>
                     ) : null}
                     {contract.developer_signed_at ? (
-                      <p className="text-xs text-navy/50">
+                      <p className="text-xs text-fg/50">
                         Developer: {contract.developer_signed_name || "Signed"}
                       </p>
                     ) : (
@@ -531,9 +531,9 @@ export function ContractsManager({
             </div>
           </label>
 
-          <div className="space-y-3 rounded-xl border border-mist bg-foam/40 p-3">
+          <div className="space-y-3 rounded-xl border border-line bg-subtle/40 p-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-navy">Milestones</p>
+              <p className="text-sm font-medium text-fg">Milestones</p>
               <button
                 type="button"
                 onClick={() =>
@@ -545,13 +545,13 @@ export function ContractsManager({
                     },
                   ])
                 }
-                className="text-xs font-medium text-navy underline"
+                className="text-xs font-medium text-fg underline"
               >
                 + Add
               </button>
             </div>
             {milestones.map((m, index) => (
-              <div key={index} className="space-y-2 rounded-xl bg-white p-2 ring-1 ring-mist">
+              <div key={index} className="space-y-2 rounded-xl bg-surface p-2 ring-1 ring-line">
                 <input
                   value={m.name}
                   onChange={(e) =>
@@ -562,7 +562,7 @@ export function ContractsManager({
                     )
                   }
                   placeholder="Name"
-                  className="w-full rounded-xl border border-mist bg-foam px-3 py-2 text-sm outline-none"
+                  className="w-full rounded-xl border border-line bg-subtle px-3 py-2 text-sm outline-none"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -577,7 +577,7 @@ export function ContractsManager({
                       )
                     }
                     placeholder="Amount"
-                    className="rounded-xl border border-mist bg-foam px-3 py-2 text-sm outline-none"
+                    className="rounded-xl border border-line bg-subtle px-3 py-2 text-sm outline-none"
                   />
                   <input
                     type="number"
@@ -591,7 +591,7 @@ export function ContractsManager({
                       )
                     }
                     placeholder="Discount"
-                    className="rounded-xl border border-mist bg-foam px-3 py-2 text-sm outline-none"
+                    className="rounded-xl border border-line bg-subtle px-3 py-2 text-sm outline-none"
                   />
                   <select
                     value={m.currency}
@@ -602,7 +602,7 @@ export function ContractsManager({
                         ),
                       )
                     }
-                    className="rounded-xl border border-mist bg-foam px-3 py-2 text-sm outline-none"
+                    className="rounded-xl border border-line bg-subtle px-3 py-2 text-sm outline-none"
                   >
                     {["KWD", "USD", "EUR", "ETB", "PLN"].map((c) => (
                       <option key={c} value={c}>
@@ -620,7 +620,7 @@ export function ContractsManager({
                       )
                     }
                     placeholder="Duration"
-                    className="rounded-xl border border-mist bg-foam px-3 py-2 text-sm outline-none"
+                    className="rounded-xl border border-line bg-subtle px-3 py-2 text-sm outline-none"
                   />
                   <input
                     type="date"
@@ -632,7 +632,7 @@ export function ContractsManager({
                         ),
                       )
                     }
-                    className="col-span-2 rounded-xl border border-mist bg-foam px-3 py-2 text-sm outline-none"
+                    className="col-span-2 rounded-xl border border-line bg-subtle px-3 py-2 text-sm outline-none"
                   />
                 </div>
                 {milestones.length > 1 ? (
@@ -641,7 +641,7 @@ export function ContractsManager({
                     onClick={() =>
                       setMilestones((prev) => prev.filter((_, i) => i !== index))
                     }
-                    className="text-xs text-red-600"
+                    className="text-xs text-red-700"
                   >
                     Remove milestone
                   </button>
@@ -653,7 +653,7 @@ export function ContractsManager({
           {error ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
           ) : null}
-          <p className="text-xs text-navy/50">
+          <p className="text-xs text-fg/50">
             Sign as developer first, then set status to <strong>sent</strong> and copy the sign
             link for the client.
           </p>

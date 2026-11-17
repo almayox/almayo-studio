@@ -13,7 +13,7 @@ import { parseSupabaseStorageUrl, resolveStorageUrl } from "@/lib/storage";
  * Files live in private storage. Stored URLs are turned into short-lived signed
  * URLs for display; anything else (blob previews, external links) is used as is.
  */
-export function useStorageUrl(url: string | null | undefined) {
+function useStorageUrl(url: string | null | undefined) {
   const needsSigning = Boolean(url && parseSupabaseStorageUrl(url));
   const [signed, setSigned] = useState<{ source: string; url: string | null } | null>(null);
 

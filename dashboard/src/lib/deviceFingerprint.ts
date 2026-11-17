@@ -1,4 +1,4 @@
-export function parseUserAgent(ua: string) {
+function parseUserAgent(ua: string) {
   const browser =
     /Edg\//.test(ua)
       ? `Edge ${ua.match(/Edg\/([\d]+)/)?.[1] ?? ""}`

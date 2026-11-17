@@ -236,9 +236,9 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-mist bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
+            <thead className="border-b border-line bg-subtle text-xs uppercase tracking-wide text-fg/60">
               <tr>
                 <th className="px-4 py-3 font-medium">Client</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">Linked</th>
@@ -246,38 +246,38 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-mist">
+            <tbody className="divide-y divide-line">
               {pagination.pageItems.map((client) => (
                 <Fragment key={client.id}>
-                <tr className="hover:bg-foam/40">
+                <tr className="hover:bg-subtle/40">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {client.logo_url ? (
                         <StorageImage
                           src={client.logo_url}
                           alt=""
-                          className="h-9 w-9 rounded-lg object-contain ring-1 ring-mist"
+                          className="h-9 w-9 rounded-lg object-contain ring-1 ring-line"
                         />
                       ) : (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy/5 text-xs font-semibold text-navy">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fg/5 text-xs font-semibold text-fg">
                           {client.name.slice(0, 1)}
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-navy">{client.name}</p>
-                        <p className="text-xs text-navy/45">
+                        <p className="font-medium text-fg">{client.name}</p>
+                        <p className="text-xs text-fg/45">
                           {client.work_types || "-"}
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="hidden px-4 py-3 text-xs text-navy/60 lg:table-cell">
+                  <td className="hidden px-4 py-3 text-xs text-fg/60 lg:table-cell">
                     <p>{client.project_count} projects</p>
                     <p>
                       {client.contract_count} contracts · {client.invoice_count} invoices ·{" "}
                       {client.campaign_count} campaigns
                     </p>
-                    <p className="text-navy/45">{client.email || client.phone || "-"}</p>
+                    <p className="text-fg/45">{client.email || client.phone || "-"}</p>
                   </td>
                   <td className="px-4 py-3">
                     <Toggle
@@ -311,10 +311,10 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
                   </td>
                 </tr>
                 {openProjectsFor === client.id ? (
-                  <tr className="bg-foam/50">
+                  <tr className="bg-subtle/50">
                     <td colSpan={4} className="px-4 py-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-navy">
+                        <p className="text-sm font-medium text-fg">
                           Projects for {client.name}
                         </p>
                         <Link
@@ -325,14 +325,14 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
                         </Link>
                       </div>
                       {(client.projects || []).length === 0 ? (
-                        <p className="mt-3 text-sm text-navy/55">
+                        <p className="mt-3 text-sm text-fg/55">
                           No projects yet for this client.
                         </p>
                       ) : (
                         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                           {groupByCatalog(client.projects || []).map(([catalog, items]) => (
                             <div key={catalog}>
-                              <p className="text-xs font-medium uppercase tracking-wide text-navy/45">
+                              <p className="text-xs font-medium uppercase tracking-wide text-fg/45">
                                 {catalog}
                               </p>
                               <ul className="mt-1.5 space-y-1">
@@ -340,7 +340,7 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
                                   <li key={project.id} className="text-sm">
                                     <Link
                                       href={`/projects/${project.id}`}
-                                      className="text-navy hover:underline"
+                                      className="text-fg hover:underline"
                                     >
                                       {project.title}
                                     </Link>
@@ -441,7 +441,7 @@ export function ClientsManager({ initialClients }: { initialClients: ClientStats
             onFiles={uploadLogo}
             accept="image/*"
             disabled={uploading}
-            className="flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-foam px-3 py-5 text-center text-sm text-navy/70"
+            className="flex flex-col items-center rounded-xl border-2 border-dashed border-line bg-subtle px-3 py-5 text-center text-sm text-fg/70"
           >
             {uploading
               ? uploadStatusLabel(uploadPhase)

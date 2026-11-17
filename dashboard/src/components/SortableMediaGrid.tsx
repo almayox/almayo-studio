@@ -51,7 +51,7 @@ function SortableMediaItem({
         <StorageVideo
           src={item.url}
           preload="none"
-          className="pointer-events-none h-full w-full rounded-lg bg-foam object-cover"
+          className="pointer-events-none h-full w-full rounded-lg bg-subtle object-cover"
         />
       ) : (
         <StorageImage
@@ -127,7 +127,7 @@ export function SortableMediaGrid({
 
   if (!items.length) {
     return (
-      <p className="text-sm text-navy/50">No gallery media yet. Drop files below.</p>
+      <p className="text-sm text-fg/50">No gallery media yet. Drop files below.</p>
     );
   }
 

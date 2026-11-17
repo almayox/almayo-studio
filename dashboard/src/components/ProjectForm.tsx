@@ -9,7 +9,6 @@ import { SortableMediaGrid } from "@/components/SortableMediaGrid";
 import { ThumbnailPositionPicker } from "@/components/ThumbnailPositionPicker";
 import {
   fieldClass,
-  labelClass,
   primaryBtnClass,
   secondaryBtnClass,
 } from "@/components/ui/PageChrome";
@@ -273,7 +272,7 @@ export function ProjectForm({
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-navy sm:col-span-2">
+        <label className="block text-sm font-medium text-fg sm:col-span-2">
           Title
           <input
             required
@@ -286,7 +285,7 @@ export function ProjectForm({
           />
         </label>
 
-        <label className="block text-sm font-medium text-navy">
+        <label className="block text-sm font-medium text-fg">
           Slug
           <input
             required
@@ -296,7 +295,7 @@ export function ProjectForm({
           />
         </label>
 
-        <label className="block text-sm font-medium text-navy">
+        <label className="block text-sm font-medium text-fg">
           Catalog
           <SearchSelect
             value={catalogId}
@@ -310,8 +309,8 @@ export function ProjectForm({
           />
         </label>
 
-        <label className="block text-sm font-medium text-navy">
-          Client <span className="text-red-600">*</span>
+        <label className="block text-sm font-medium text-fg">
+          Client <span className="text-red-700">*</span>
           <SearchSelect
             value={clientId}
             onChange={setClientId}
@@ -323,9 +322,9 @@ export function ProjectForm({
             }))}
           />
           {clients.length === 0 ? (
-            <span className="mt-1.5 block text-xs font-normal text-navy/60">
+            <span className="mt-1.5 block text-xs font-normal text-fg/60">
               No clients yet.{" "}
-              <Link href="/clients" className="font-medium text-navy underline">
+              <Link href="/clients" className="font-medium text-fg underline">
                 Add a client
               </Link>{" "}
               first.
@@ -333,24 +332,24 @@ export function ProjectForm({
           ) : null}
         </label>
 
-        <div className="rounded-xl border border-mist bg-foam/60 p-4 sm:col-span-2">
-          <label className="flex items-start gap-3 text-sm font-medium text-navy">
+        <div className="rounded-xl border border-line bg-subtle/60 p-4 sm:col-span-2">
+          <label className="flex items-start gap-3 text-sm font-medium text-fg">
             <input
               type="checkbox"
               checked={contractRequired}
               onChange={(e) => setContractRequired(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-mist"
+              className="mt-0.5 h-4 w-4 rounded border-line"
             />
             <span>
               This project needs a contract
-              <span className="block text-xs font-normal text-navy/60">
+              <span className="block text-xs font-normal text-fg/60">
                 Internal only, never shown on the public site. Leave off for work done without
                 a contract.
               </span>
             </span>
           </label>
           {contractRequired ? (
-            <p className="mt-3 flex flex-wrap items-center gap-2 pl-7 text-xs text-navy/70">
+            <p className="mt-3 flex flex-wrap items-center gap-2 pl-7 text-xs text-fg/70">
               <span
                 className={`rounded-full px-2.5 py-1 font-medium ${
                   contractStatus === "signed"
@@ -365,7 +364,7 @@ export function ProjectForm({
               {project?.id ? (
                 <Link
                   href={`/contracts?project=${project.id}&client=${clientId}${contractStatus ? "" : "&new=1"}`}
-                  className="font-medium text-navy underline"
+                  className="font-medium text-fg underline"
                 >
                   {contractStatus ? "Open contracts" : "Create contract"}
                 </Link>
@@ -376,7 +375,7 @@ export function ProjectForm({
           ) : null}
         </div>
 
-        <label className="block text-sm font-medium text-navy sm:col-span-2">
+        <label className="block text-sm font-medium text-fg sm:col-span-2">
           Description
           <div className="mt-1.5">
             <RichTextEditor
@@ -387,7 +386,7 @@ export function ProjectForm({
           </div>
         </label>
 
-        <label className="block text-sm font-medium text-navy">
+        <label className="block text-sm font-medium text-fg">
           Tags (comma separated)
           <input
             value={tags}
@@ -396,7 +395,7 @@ export function ProjectForm({
           />
         </label>
 
-        <label className="block text-sm font-medium text-navy">
+        <label className="block text-sm font-medium text-fg">
           Tech stack
           <input
             value={techStack}
@@ -405,7 +404,7 @@ export function ProjectForm({
           />
         </label>
 
-        <label className="block text-sm font-medium text-navy">
+        <label className="block text-sm font-medium text-fg">
           Sort order
           <input
             type="number"
@@ -416,7 +415,7 @@ export function ProjectForm({
         </label>
 
         <div className="flex flex-wrap items-end gap-5 pb-2">
-          <label className="inline-flex items-center gap-2 text-sm text-navy">
+          <label className="inline-flex items-center gap-2 text-sm text-fg">
             <input
               type="checkbox"
               checked={isVisible}
@@ -424,7 +423,7 @@ export function ProjectForm({
             />
             Published
           </label>
-          <label className="inline-flex items-center gap-2 text-sm text-navy">
+          <label className="inline-flex items-center gap-2 text-sm text-fg">
             <input
               type="checkbox"
               checked={isFeatured}
@@ -435,10 +434,10 @@ export function ProjectForm({
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-mist bg-white p-5">
+      <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
         <div>
-          <p className="text-sm font-medium text-navy">Project media</p>
-          <p className="mt-1 text-xs text-navy/50">
+          <p className="text-sm font-medium text-fg">Project media</p>
+          <p className="mt-1 text-xs text-fg/50">
             Drag & drop to upload. Drag an image to reorder. Click ★ to set the thumbnail.
           </p>
         </div>
@@ -471,19 +470,19 @@ export function ProjectForm({
           accept="image/*,video/*"
           multiple
           disabled={uploading}
-          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-mist bg-foam px-4 py-10 text-center transition hover:border-navy/30"
+          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-subtle px-4 py-10 text-center transition hover:border-fg/30"
         >
-          <span className="font-[family-name:var(--font-display)] text-lg text-navy">
+          <span className="font-[family-name:var(--font-display)] text-lg text-fg">
             {uploading
               ? uploadStatusLabel(uploadPhase, uploadProgress)
               : "Drop files here or click to upload"}
           </span>
-          <span className="text-xs text-navy/50">PNG, JPG, WEBP, MP4. Multiple files supported.</span>
+          <span className="text-xs text-fg/50">PNG, JPG, WEBP, MP4. Multiple files supported.</span>
         </DropUpload>
 
         {thumbnailUrl ? (
           <div>
-            <p className="text-sm font-medium text-navy">Thumbnail preview</p>
+            <p className="text-sm font-medium text-fg">Thumbnail preview</p>
             <ThumbnailPositionPicker
               url={thumbnailUrl}
               position={thumbnailPosition}
@@ -495,13 +494,13 @@ export function ProjectForm({
                 setThumbnailUrl("");
                 setThumbnailPosition("50% 50%");
               }}
-              className="mt-2 text-xs text-navy/55 underline hover:text-navy"
+              className="mt-2 text-xs text-fg/55 underline hover:text-fg"
             >
               Clear thumbnail
             </button>
           </div>
         ) : (
-          <p className="text-sm text-navy/50">
+          <p className="text-sm text-fg/50">
             No thumbnail selected yet. Upload media, then click ★ on one image.
           </p>
         )}

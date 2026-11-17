@@ -62,26 +62,26 @@ export function SocialLinksManager({
   }
 
   return (
-    <section className={embedded ? "space-y-4" : "rounded-xl border border-mist bg-white p-5"}>
-      <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">
+    <section className={embedded ? "space-y-4" : "rounded-xl border border-line bg-surface p-5"}>
+      <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">
         Social links
       </h2>
-      <p className="mt-1 text-sm text-navy/55">Shown in the website footer.</p>
+      <p className="mt-1 text-sm text-fg/55">Shown in the website footer.</p>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-mist bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
         {initialLinks.length === 0 ? (
-          <p className="p-4 text-sm text-navy/50">No social links yet.</p>
+          <p className="p-4 text-sm text-fg/50">No social links yet.</p>
         ) : (
           <>
             <div className="space-y-2 p-4">
               {pagination.pageItems.map((link) => (
                 <div
                   key={link.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-mist px-3 py-2"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium text-navy">{link.platform}</p>
-                    <p className="truncate text-xs text-navy/50">{link.url}</p>
+                    <p className="font-medium text-fg">{link.platform}</p>
+                    <p className="truncate text-xs text-fg/50">{link.url}</p>
                   </div>
                   <ActionGroup>
                     <ActionButton

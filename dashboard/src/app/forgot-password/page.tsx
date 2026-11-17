@@ -30,16 +30,16 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-navy-deep via-navy to-[#163566] px-5">
+    <div className="flex min-h-screen items-center justify-center app-backdrop px-5">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl shadow-black/20"
+        className="w-full max-w-md glass rounded-2xl border border-line p-8 shadow-2xl shadow-black/40"
       >
-        <p className="text-xs font-medium uppercase tracking-[0.22em] text-navy/45">Admin</p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl text-navy">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] text-fg/45">Admin</p>
+        <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl text-fg">
           Forgot password
         </h1>
-        <p className="mt-2 text-sm text-navy/60">
+        <p className="mt-2 text-sm text-fg/60">
           We’ll email you a link to reset your password.
         </p>
 
@@ -49,14 +49,14 @@ export default function ForgotPasswordPage() {
           </div>
         ) : (
           <>
-            <label className="mt-8 block text-sm font-medium text-navy">
+            <label className="mt-8 block text-sm font-medium text-fg">
               Email
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-mist bg-foam px-3 py-2.5 outline-none ring-navy/30 focus:ring-2"
+                className="control mt-1.5 w-full "
               />
             </label>
             {error ? (
@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
           </>
         )}
 
-        <Link href="/login" className="mt-4 block text-center text-sm text-navy/60 hover:text-navy">
+        <Link href="/login" className="mt-4 block text-center text-sm text-fg/60 hover:text-fg">
           Back to login
         </Link>
       </form>

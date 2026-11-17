@@ -6,7 +6,7 @@ import type { createClient } from "@/lib/supabase/client";
 type SupabaseBrowserClient = ReturnType<typeof createClient>;
 
 /** Postgres error code for a unique constraint violation. */
-export const UNIQUE_VIOLATION = "23505";
+const UNIQUE_VIOLATION = "23505";
 
 /**
  * Next document number: highest numeric suffix of all existing numbers + 1,

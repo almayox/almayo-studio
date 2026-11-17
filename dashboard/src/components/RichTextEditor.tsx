@@ -73,8 +73,8 @@ function ToolBtn({
       onClick={onClick}
       className={`rounded-md p-1.5 transition-colors ${
         active
-          ? "bg-navy text-white"
-          : "text-navy/55 hover:bg-white hover:text-navy"
+          ? "bg-fg text-canvas"
+          : "text-fg/55 hover:bg-surface hover:text-fg"
       }`}
     >
       {children}
@@ -110,7 +110,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "min-h-[160px] flex-1 px-3 py-2.5 text-sm leading-relaxed text-navy outline-none prose prose-sm max-w-none",
+          "min-h-[160px] flex-1 px-3 py-2.5 text-sm leading-relaxed text-fg outline-none paper prose prose-sm max-w-none",
         ...(placeholder ? { "data-placeholder": placeholder } : {}),
       },
     },
@@ -127,10 +127,10 @@ export function RichTextEditor({
 
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-xl border border-mist bg-white"
+      className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface"
       style={{ resize: "vertical", minHeight: 220 }}
     >
-      <div className="flex flex-shrink-0 flex-wrap items-center gap-0.5 border-b border-mist bg-foam/80 px-2 py-1.5 select-none">
+      <div className="flex flex-shrink-0 flex-wrap items-center gap-0.5 border-b border-line bg-subtle/80 px-2 py-1.5 select-none">
         <ToolBtn
           active={editor.isActive("heading", { level: 1 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -153,7 +153,7 @@ export function RichTextEditor({
           <Heading3 size={13} />
         </ToolBtn>
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
         <ToolBtn
           active={editor.isActive("bold")}
@@ -177,7 +177,7 @@ export function RichTextEditor({
           <Strikethrough size={13} />
         </ToolBtn>
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
         {FONT_SIZES.map((fs) => (
           <ToolBtn
@@ -197,9 +197,9 @@ export function RichTextEditor({
           <span className="text-[10px]">Aa</span>
         </ToolBtn>
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
-        <span className="mr-0.5 text-[10px] font-medium text-navy/45">A</span>
+        <span className="mr-0.5 text-[10px] font-medium text-fg/45">A</span>
         {TEXT_COLORS.map((c) => (
           <button
             key={c.value || "default"}
@@ -210,14 +210,14 @@ export function RichTextEditor({
                 ? editor.chain().focus().setColor(c.value).run()
                 : editor.chain().focus().unsetColor().run()
             }
-            className="h-4 w-4 rounded-full border border-mist transition-transform hover:scale-110"
+            className="h-4 w-4 rounded-full border border-line transition-transform hover:scale-110"
             style={{ background: c.value || "#374151" }}
           />
         ))}
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
-        <span className="mr-0.5 text-[10px] font-medium text-navy/45">H</span>
+        <span className="mr-0.5 text-[10px] font-medium text-fg/45">H</span>
         {HIGHLIGHT_COLORS.map((c) => (
           <button
             key={c.bg}
@@ -226,8 +226,8 @@ export function RichTextEditor({
             onClick={() => editor.chain().focus().toggleHighlight({ color: c.bg }).run()}
             className={`h-4 w-4 rounded-full border transition-transform hover:scale-110 ${
               editor.isActive("highlight", { color: c.bg })
-                ? "scale-110 border-navy"
-                : "border-mist"
+                ? "scale-110 border-fg"
+                : "border-line"
             }`}
             style={{ background: c.bg }}
           />
@@ -239,7 +239,7 @@ export function RichTextEditor({
           <span className="text-[10px]">✕</span>
         </ToolBtn>
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
         <ToolBtn
           active={editor.isActive({ textAlign: "left" })}
@@ -270,7 +270,7 @@ export function RichTextEditor({
           <AlignJustify size={13} />
         </ToolBtn>
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
         <ToolBtn
           active={editor.isActive("bulletList")}
@@ -287,7 +287,7 @@ export function RichTextEditor({
           <ListOrdered size={13} />
         </ToolBtn>
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
         <ToolBtn
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
@@ -304,7 +304,7 @@ export function RichTextEditor({
           <TableIcon size={13} />
         </ToolBtn>
 
-        <div className="mx-1 h-4 w-px bg-mist" />
+        <div className="mx-1 h-4 w-px bg-muted" />
 
         <ToolBtn onClick={() => editor.chain().focus().undo().run()} title="Undo">
           <Undo size={13} />
@@ -315,7 +315,7 @@ export function RichTextEditor({
       </div>
 
       {editor.isActive("table") ? (
-        <div className="flex flex-wrap items-center gap-1 border-b border-mist bg-blue-50/70 px-2 py-1 text-[10px] text-blue-800 select-none">
+        <div className="flex flex-wrap items-center gap-1 border-b border-line bg-blue-50/70 px-2 py-1 text-[10px] text-blue-800 select-none">
           <span className="mr-1 font-semibold">Table:</span>
           <button
             type="button"
@@ -334,7 +334,7 @@ export function RichTextEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().deleteColumn().run()}
-            className="rounded px-1.5 py-0.5 text-red-600 hover:bg-blue-100"
+            className="rounded px-1.5 py-0.5 text-red-700 hover:bg-blue-100"
           >
             − Col
           </button>
@@ -355,14 +355,14 @@ export function RichTextEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().deleteRow().run()}
-            className="rounded px-1.5 py-0.5 text-red-600 hover:bg-blue-100"
+            className="rounded px-1.5 py-0.5 text-red-700 hover:bg-blue-100"
           >
             − Row
           </button>
           <button
             type="button"
             onClick={() => editor.chain().focus().deleteTable().run()}
-            className="rounded px-1.5 py-0.5 text-red-600 hover:bg-blue-100"
+            className="rounded px-1.5 py-0.5 text-red-700 hover:bg-blue-100"
           >
             Delete
           </button>

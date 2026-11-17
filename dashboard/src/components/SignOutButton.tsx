@@ -1,13 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function SignOutButton({
-  variant = "light",
+  variant = "button",
   className = "",
 }: {
-  variant?: "light" | "dark";
+  /** "sidebar" matches the sidebar links; "button" is a small outlined button. */
+  variant?: "button" | "sidebar";
   className?: string;
 }) {
   const router = useRouter();
@@ -20,12 +22,13 @@ export function SignOutButton({
   }
 
   const base =
-    variant === "dark"
-      ? "flex items-center rounded-xl px-3 py-2.5 text-sm text-white/65 transition hover:bg-red-900/30 hover:text-red-200"
-      : "rounded-lg border border-navy/15 px-3 py-1.5 text-xs text-navy transition hover:bg-navy/5";
+    variant === "sidebar"
+      ? "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-fg/60 transition hover:bg-red-50 hover:text-red-700"
+      : "rounded-lg border border-line px-3 py-1.5 text-xs text-fg transition hover:bg-subtle";
 
   return (
     <button type="button" onClick={signOut} className={`${base} ${className}`}>
+      {variant === "sidebar" ? <LogOut size={16} strokeWidth={1.75} aria-hidden /> : null}
       Sign out
     </button>
   );

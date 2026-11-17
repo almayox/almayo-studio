@@ -17,7 +17,9 @@ import type {
   SocialLink,
 } from "@/lib/types";
 
-const TABS: { id: SettingsTabId | "brand" | "social" | "security"; label: string }[] = [
+type TabId = SettingsTabId | "about" | "brand" | "social" | "security";
+
+const TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
   { id: "browser", label: "Browser Tab" },
   { id: "about", label: "About" },
@@ -43,7 +45,7 @@ export function SettingsTabs({
   socialLinks: SocialLink[];
   logos: LogoVariant[];
 }) {
-  const [tab, setTab] = useState<SettingsTabId | "brand" | "social" | "security">("general");
+  const [tab, setTab] = useState<TabId>("general");
 
   return (
     <div>
@@ -52,7 +54,7 @@ export function SettingsTabs({
         description="Site content, brand assets, and contact details."
       />
 
-      <div className="mb-6 flex flex-wrap gap-1 rounded-xl bg-foam p-1">
+      <div className="mb-6 flex flex-wrap gap-1 rounded-xl bg-subtle p-1">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -60,8 +62,8 @@ export function SettingsTabs({
             onClick={() => setTab(item.id)}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
               tab === item.id
-                ? "bg-white text-navy shadow-sm"
-                : "text-navy/55 hover:text-navy"
+                ? "bg-muted text-fg"
+                : "text-fg/55 hover:text-fg"
             }`}
           >
             {item.label}
@@ -69,7 +71,7 @@ export function SettingsTabs({
         ))}
       </div>
 
-      <div className="rounded-xl border border-mist bg-white p-5 sm:p-6">
+      <div className="rounded-xl border border-line bg-surface p-5 sm:p-6">
         {tab === "security" ? (
           <SecuritySettings />
         ) : tab === "social" ? (
@@ -77,7 +79,6 @@ export function SettingsTabs({
         ) : tab === "brand" ? (
           <BrandAssetsManager
             settings={settings}
-            about={about}
             logos={logos}
             compact
             embedded
@@ -85,14 +86,13 @@ export function SettingsTabs({
         ) : tab === "about" ? (
           <div className="space-y-6">
             <AboutSettings about={about} />
-            <div className="border-t border-mist pt-6">
+            <div className="border-t border-line pt-6">
               <ResumeUpload resume={resume} embedded />
             </div>
           </div>
         ) : (
           <SettingsForm
             settings={settings}
-            about={about}
             contact={contact}
             tab={tab}
           />

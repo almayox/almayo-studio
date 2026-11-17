@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { controlClass } from "@/components/ui/PageChrome";
+import { fieldClass } from "@/components/ui/PageChrome";
 
 export type SearchSelectOption = {
   value: string;
@@ -69,27 +69,27 @@ export function SearchSelect({
           setQuery("");
           setOpen((prev) => !prev);
         }}
-        className={`${controlClass} flex items-center justify-between gap-2 text-left`}
+        className={`${fieldClass} flex items-center justify-between gap-2 text-left`}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={selected ? "truncate text-navy" : "truncate text-navy/45"}>
+        <span className={selected ? "truncate text-fg" : "truncate text-fg/45"}>
           {selected?.label || emptyLabel || placeholder}
         </span>
-        <span className="shrink-0 text-navy/40" aria-hidden>
+        <span className="shrink-0 text-fg/40" aria-hidden>
           ▾
         </span>
       </button>
 
       {open ? (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-mist bg-white shadow-lg">
-          <div className="border-b border-mist p-2">
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-line bg-panel shadow-xl shadow-black/40">
+          <div className="border-b border-line p-2">
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={placeholder}
-              className="control w-full bg-foam"
+              className="control w-full bg-subtle"
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
                   e.preventDefault();
@@ -109,7 +109,7 @@ export function SearchSelect({
                   type="button"
                   onClick={() => choose("")}
                   className={`flex w-full px-3 py-2 text-left text-sm ${
-                    !value ? "bg-foam text-navy" : "text-navy/70 hover:bg-foam"
+                    !value ? "bg-subtle text-fg" : "text-fg/70 hover:bg-subtle"
                   }`}
                 >
                   {emptyLabel}
@@ -123,8 +123,8 @@ export function SearchSelect({
                   onClick={() => choose(option.value)}
                   className={`flex w-full px-3 py-2 text-left text-sm ${
                     option.value === value
-                      ? "bg-navy text-white"
-                      : "text-navy hover:bg-foam"
+                      ? "bg-fg text-canvas"
+                      : "text-fg hover:bg-subtle"
                   }`}
                 >
                   {option.label}
@@ -132,7 +132,7 @@ export function SearchSelect({
               </li>
             ))}
             {filtered.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-navy/50">No matches</li>
+              <li className="px-3 py-2 text-sm text-fg/50">No matches</li>
             ) : null}
           </ul>
         </div>

@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="min-h-full bg-foam text-ink">{children}</body>
+      <body className="app-backdrop min-h-full text-fg">{children}</body>
     </html>
   );
 }

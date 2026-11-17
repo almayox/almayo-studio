@@ -58,9 +58,9 @@ export function ResumeUpload({
   }
 
   return (
-    <section className={embedded ? "" : "rounded-xl border border-mist bg-white p-5"}>
-      <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">Resume PDF</h2>
-      <p className="mt-1 text-sm text-navy/55">
+    <section className={embedded ? "" : "rounded-xl border border-line bg-surface p-5"}>
+      <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">Resume PDF</h2>
+      <p className="mt-1 text-sm text-fg/55">
         Shown on the public /resume page for download.
       </p>
       {resume?.file_url ? (
@@ -68,18 +68,18 @@ export function ResumeUpload({
           href={resume.file_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-block text-sm text-navy underline"
+          className="mt-3 inline-block text-sm text-fg underline"
         >
           {resume.original_name || "Current resume"}
         </StorageLink>
       ) : (
-        <p className="mt-3 text-sm text-navy/55">No resume uploaded yet.</p>
+        <p className="mt-3 text-sm text-fg/55">No resume uploaded yet.</p>
       )}
       <DropUpload
         onFiles={onFiles}
         accept="application/pdf"
         disabled={uploading}
-        className="mt-4 flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-foam px-4 py-6 text-center text-sm text-navy/70"
+        className="mt-4 flex flex-col items-center rounded-xl border-2 border-dashed border-line bg-subtle px-4 py-6 text-center text-sm text-fg/70"
       >
         {uploading ? "Uploading…" : "Drop PDF or click to upload"}
       </DropUpload>

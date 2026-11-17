@@ -231,8 +231,8 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
             onClick={() => setCurrencyFilter(cur)}
             className={`rounded-full px-3 py-1 text-xs font-medium border ${
               currencyFilter === cur
-                ? "border-navy bg-navy text-white"
-                : "border-mist bg-white text-navy/65"
+                ? "border-fg bg-fg text-canvas"
+                : "border-line bg-surface text-fg/65"
             }`}
           >
             {cur}
@@ -241,15 +241,15 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
       </div>
 
       {byCategory.length ? (
-        <div className="mb-5 rounded-2xl border border-mist bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-navy/45">
+        <div className="mb-5 rounded-2xl border border-line bg-surface p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-fg/45">
             By category
           </p>
           <ul className="mt-3 space-y-2">
             {byCategory.map(([cat, amount]) => (
               <li key={cat} className="flex items-center justify-between text-sm">
-                <span className="text-navy/70">{cat}</span>
-                <span className="font-medium text-navy">{amount.toFixed(2)}</span>
+                <span className="text-fg/70">{cat}</span>
+                <span className="font-medium text-fg">{amount.toFixed(2)}</span>
               </li>
             ))}
           </ul>
@@ -259,9 +259,9 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
       {filtered.length === 0 ? (
         <EmptyState message="No expenses yet." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-mist bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
+            <thead className="border-b border-line bg-subtle text-xs uppercase tracking-wide text-fg/60">
               <tr>
                 <th className="px-4 py-3 font-medium">Expense</th>
                 <th className="px-4 py-3 font-medium">Amount</th>
@@ -269,12 +269,12 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-mist">
+            <tbody className="divide-y divide-line">
               {pagination.pageItems.map((expense) => (
-                <tr key={expense.id} className="hover:bg-foam/40">
+                <tr key={expense.id} className="hover:bg-subtle/40">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-navy">{expense.title}</p>
-                    <p className="text-xs text-navy/45">
+                    <p className="font-medium text-fg">{expense.title}</p>
+                    <p className="text-xs text-fg/45">
                       {[expense.category, expense.merchant_name, expense.payment_method]
                         .filter(Boolean)
                         .join(" · ") || "-"}
@@ -284,16 +284,16 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
                         href={expense.receipt_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 inline-block text-xs font-medium text-navy underline"
+                        className="mt-1 inline-block text-xs font-medium text-fg underline"
                       >
                         Receipt
                       </StorageLink>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 text-navy/80">
+                  <td className="px-4 py-3 text-fg/80">
                     {Number(expense.amount).toFixed(2)} {expense.currency}
                   </td>
-                  <td className="hidden px-4 py-3 text-navy/70 sm:table-cell">
+                  <td className="hidden px-4 py-3 text-fg/70 sm:table-cell">
                     {expense.date}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -424,7 +424,7 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
             onFiles={uploadReceipt}
             accept="image/*,.pdf"
             disabled={uploading}
-            className="flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-foam px-3 py-5 text-center text-sm text-navy/70"
+            className="flex flex-col items-center rounded-xl border-2 border-dashed border-line bg-subtle px-3 py-5 text-center text-sm text-fg/70"
           >
             {uploading
               ? uploadStatusLabel(uploadPhase)
@@ -437,7 +437,7 @@ export function ExpensesManager({ initialExpenses }: { initialExpenses: Expense[
               href={form.receiptUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-navy underline"
+              className="text-xs text-fg underline"
             >
               View current receipt
             </StorageLink>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
 import { createClient } from "@/lib/supabase/client";
 import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
-import type { AboutContent, LogoVariant, SiteSettings } from "@/lib/types";
+import type { LogoVariant, SiteSettings } from "@/lib/types";
 import { StorageImage } from "@/components/StorageMedia";
 
 const NAVBAR_LOGOS = [
@@ -25,13 +25,11 @@ const NAVBAR_LOGOS = [
 
 export function BrandAssetsManager({
   settings,
-  about,
   logos,
   compact = false,
   embedded = false,
 }: {
   settings: SiteSettings;
-  about: AboutContent;
   logos: LogoVariant[];
   compact?: boolean;
   embedded?: boolean;
@@ -104,12 +102,12 @@ export function BrandAssetsManager({
   }
 
   return (
-    <section className={embedded ? "space-y-4" : "space-y-4 rounded-xl border border-mist bg-white p-5"}>
+    <section className={embedded ? "space-y-4" : "space-y-4 rounded-xl border border-line bg-surface p-5"}>
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">
+        <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">
           Brand assets
         </h2>
-        <p className="mt-1 text-sm text-navy/55">
+        <p className="mt-1 text-sm text-fg/55">
           Navbar logos and social share image.
         </p>
       </div>
@@ -152,8 +150,8 @@ export function BrandAssetsManager({
           {message}
         </p>
       ) : null}
-      <p className="text-[11px] text-navy/40">
-        Logo table missing? Run <code className="rounded bg-foam px-1">schema_parity.sql</code>.
+      <p className="text-[11px] text-fg/40">
+        Logo table missing? Run <code className="rounded bg-subtle px-1">schema_parity.sql</code>.
       </p>
     </section>
   );
@@ -180,16 +178,16 @@ function AssetSlot({
 }) {
   const previewHeight = compact ? "h-14" : "h-12";
   const dropClass = compact
-    ? "mt-2 flex flex-col items-center rounded-lg border border-dashed border-mist bg-white px-3 py-2 text-center text-xs text-navy/70"
-    : "mt-3 flex flex-col items-center rounded-lg border border-dashed border-mist bg-white px-3 py-4 text-center text-xs text-navy/70";
+    ? "mt-2 flex flex-col items-center rounded-lg border border-dashed border-line bg-surface px-3 py-2 text-center text-xs text-fg/70"
+    : "mt-3 flex flex-col items-center rounded-lg border border-dashed border-line bg-surface px-3 py-4 text-center text-xs text-fg/70";
 
   return (
-    <div className="rounded-lg border border-mist bg-foam/40 p-3">
-      <p className="text-sm font-medium text-navy">{title}</p>
-      {hint ? <p className="mt-0.5 text-xs text-navy/50">{hint}</p> : null}
+    <div className="rounded-lg border border-line bg-subtle/40 p-3">
+      <p className="text-sm font-medium text-fg">{title}</p>
+      {hint ? <p className="mt-0.5 text-xs text-fg/50">{hint}</p> : null}
       <div
         className={`mt-2 flex min-h-14 items-center justify-center rounded-lg px-3 py-2 ${
-          previewDark ? "bg-navy" : "bg-white ring-1 ring-mist"
+          previewDark ? "bg-[#0a1f44]" : "bg-[#ffffff] ring-1 ring-black/10"
         }`}
       >
         {preview ? (
@@ -199,7 +197,7 @@ function AssetSlot({
             className={`${previewHeight} w-auto max-w-full object-contain`}
           />
         ) : (
-          <p className={`text-xs ${previewDark ? "text-white/50" : "text-navy/40"}`}>
+          <p className={`text-xs ${previewDark ? "text-white/50" : "text-black/40"}`}>
             Not set
           </p>
         )}

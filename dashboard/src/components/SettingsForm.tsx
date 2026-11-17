@@ -10,13 +10,12 @@ import {
   labelClass,
   primaryBtnClass,
 } from "@/components/ui/PageChrome";
-import type { AboutContent, ContactDetails, SiteSettings } from "@/lib/types";
+import type { ContactDetails, SiteSettings } from "@/lib/types";
 import { StorageImage } from "@/components/StorageMedia";
 
 export type SettingsTabId =
   | "general"
   | "browser"
-  | "about"
   | "contact"
   | "testimonials";
 
@@ -26,26 +25,6 @@ type TestimonialDraft = {
   role: string;
   company: string;
 };
-
-type ServiceDraft = { title: string; description: string };
-type ExperienceDraft = {
-  role: string;
-  company: string;
-  period: string;
-  description: string;
-};
-type CertDraft = { name: string; issuer: string; year: string };
-
-function skillsToText(skills: AboutContent["skills"]) {
-  if (Array.isArray(skills)) return skills.join(", ");
-  try {
-    const parsed = JSON.parse(skills);
-    if (Array.isArray(parsed)) return parsed.join(", ");
-  } catch {
-    /* ignore */
-  }
-  return typeof skills === "string" ? skills : "";
-}
 
 function padList<T>(items: T[], count: number, empty: () => T): T[] {
   const next = [...items];
@@ -75,56 +54,6 @@ function parseExistingTestimonials(value: unknown): TestimonialDraft[] {
   return padList(items, 3, empty);
 }
 
-function parseServices(value: unknown): ServiceDraft[] {
-  const empty = (): ServiceDraft => ({ title: "", description: "" });
-  let items: ServiceDraft[] = [];
-  if (Array.isArray(value)) {
-    items = value.map((item) => {
-      const row = item as Partial<ServiceDraft>;
-      return { title: row.title || "", description: row.description || "" };
-    });
-  }
-  return padList(items, 5, empty);
-}
-
-function parseExperience(value: unknown): ExperienceDraft[] {
-  const empty = (): ExperienceDraft => ({
-    role: "",
-    company: "",
-    period: "",
-    description: "",
-  });
-  let items: ExperienceDraft[] = [];
-  if (Array.isArray(value)) {
-    items = value.map((item) => {
-      const row = item as Partial<ExperienceDraft> & { title?: string };
-      return {
-        role: row.role || row.title || "",
-        company: row.company || "",
-        period: row.period || "",
-        description: row.description || "",
-      };
-    });
-  }
-  return padList(items, 4, empty);
-}
-
-function parseCerts(value: unknown): CertDraft[] {
-  const empty = (): CertDraft => ({ name: "", issuer: "", year: "" });
-  let items: CertDraft[] = [];
-  if (Array.isArray(value)) {
-    items = value.map((item) => {
-      const row = item as Partial<CertDraft>;
-      return {
-        name: row.name || "",
-        issuer: row.issuer || "",
-        year: row.year || "",
-      };
-    });
-  }
-  return padList(items, 4, empty);
-}
-
 function StatusMessages({
   error,
   message,
@@ -148,12 +77,10 @@ function StatusMessages({
 
 export function SettingsForm({
   settings,
-  about,
   contact,
   tab,
 }: {
   settings: SiteSettings;
-  about: AboutContent;
   contact: ContactDetails;
   tab: SettingsTabId;
 }) {
@@ -168,8 +95,6 @@ export function SettingsForm({
     countries_list: settings.countries_list ?? "Kuwait, EU, Ethiopia",
     whatsapp_number: settings.whatsapp_number,
     tab_title: settings.tab_title ?? "",
-    bio: about.bio,
-    skills: skillsToText(about.skills),
     email: contact.email,
     phone: contact.phone,
     location: contact.location,
@@ -177,15 +102,6 @@ export function SettingsForm({
   });
   const [testimonials, setTestimonials] = useState<TestimonialDraft[]>(
     parseExistingTestimonials(settings.testimonials),
-  );
-  const [services, setServices] = useState<ServiceDraft[]>(
-    parseServices(about.services),
-  );
-  const [experience, setExperience] = useState<ExperienceDraft[]>(
-    parseExperience(about.experience),
-  );
-  const [certs, setCerts] = useState<CertDraft[]>(
-    parseCerts(about.certifications),
   );
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -292,58 +208,6 @@ export function SettingsForm({
     }
   }
 
-  async function saveAbout(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const supabase = createClient();
-      const skills = form.skills
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const nextServices = services
-        .map((item) => ({
-          title: item.title.trim(),
-          description: item.description.trim(),
-        }))
-        .filter((item) => item.title);
-      const nextExperience = experience
-        .map((item) => ({
-          role: item.role.trim(),
-          company: item.company.trim() || undefined,
-          period: item.period.trim() || undefined,
-          description: item.description.trim() || undefined,
-        }))
-        .filter((item) => item.role);
-      const nextCerts = certs
-        .map((item) => ({
-          name: item.name.trim(),
-          issuer: item.issuer.trim() || undefined,
-          year: item.year.trim() || undefined,
-        }))
-        .filter((item) => item.name);
-
-      const { error: updateError } = await supabase
-        .from("about_content")
-        .update({
-          bio: form.bio,
-          skills,
-          services: nextServices,
-          experience: nextExperience,
-          certifications: nextCerts,
-        })
-        .eq("id", about.id);
-      if (updateError) throw updateError;
-      setMessage("About content saved.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function saveContact(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
@@ -402,10 +266,10 @@ export function SettingsForm({
     return (
       <form onSubmit={saveGeneral} className="space-y-4">
         <div>
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">
+          <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">
             Site & hero
           </h2>
-          <p className="mt-1 text-sm text-navy/55">Homepage headline and stats.</p>
+          <p className="mt-1 text-sm text-fg/55">Homepage headline and stats.</p>
         </div>
         {(
           [
@@ -441,10 +305,10 @@ export function SettingsForm({
     return (
       <form onSubmit={saveBrowser} className="space-y-4">
         <div>
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">
+          <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">
             Browser tab
           </h2>
-          <p className="mt-1 text-sm text-navy/55">
+          <p className="mt-1 text-sm text-fg/55">
             Tab title and favicon shown in the browser.
           </p>
         </div>
@@ -456,18 +320,18 @@ export function SettingsForm({
             className={fieldClass}
           />
         </label>
-        <div className="rounded-lg border border-mist bg-foam/40 p-4">
-          <p className="text-sm font-medium text-navy">Favicon</p>
+        <div className="rounded-lg border border-line bg-subtle/40 p-4">
+          <p className="text-sm font-medium text-fg">Favicon</p>
           {faviconUrl ? (
             <StorageImage src={faviconUrl} alt="Favicon" className="mt-2 h-10 w-10 object-contain" />
           ) : (
-            <p className="mt-1 text-xs text-navy/50">No favicon yet</p>
+            <p className="mt-1 text-xs text-fg/50">No favicon yet</p>
           )}
           <DropUpload
             onFiles={uploadFavicon}
             accept="image/png,image/jpeg,image/webp,image/x-icon"
             disabled={faviconBusy}
-            className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-3 py-5 text-center text-sm text-navy/70"
+            className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-line bg-surface px-3 py-5 text-center text-sm text-fg/70"
           >
             {faviconBusy
               ? uploadStatusLabel(faviconPhase)
@@ -482,16 +346,12 @@ export function SettingsForm({
     );
   }
 
-  if (tab === "about") {
-    return null;
-  }
-
   if (tab === "contact") {
     return (
       <form onSubmit={saveContact} className="space-y-4">
         <div>
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">Contact</h2>
-          <p className="mt-1 text-sm text-navy/55">Public contact details on the site.</p>
+          <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">Contact</h2>
+          <p className="mt-1 text-sm text-fg/55">Public contact details on the site.</p>
         </div>
         {(
           [
@@ -521,19 +381,19 @@ export function SettingsForm({
   return (
     <form onSubmit={saveTestimonials} className="space-y-4">
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">
+        <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">
           Homepage testimonials
         </h2>
-        <p className="mt-1 text-sm text-navy/55">
+        <p className="mt-1 text-sm text-fg/55">
           Up to 3 quotes. Leave blank to hide the section.
         </p>
       </div>
       {testimonials.map((item, index) => (
         <div
           key={index}
-          className="space-y-3 rounded-lg border border-mist bg-foam/40 p-4"
+          className="space-y-3 rounded-lg border border-line bg-subtle/40 p-4"
         >
-          <p className="text-xs font-medium uppercase tracking-wide text-navy/45">
+          <p className="text-xs font-medium uppercase tracking-wide text-fg/45">
             Quote {index + 1}
           </p>
           <label className={labelClass}>

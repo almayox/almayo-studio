@@ -24,7 +24,7 @@ export function Toggle({
     >
       <span
         className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
-          checked ? "bg-emerald-500" : "bg-navy/25"
+          checked ? "bg-emerald-500" : "bg-fg/25"
         }`}
       >
         <span
@@ -34,7 +34,7 @@ export function Toggle({
         />
       </span>
       <span
-        className={`text-xs font-medium ${checked ? "text-emerald-700" : "text-navy/50"}`}
+        className={`text-xs font-medium ${checked ? "text-emerald-700" : "text-fg/50"}`}
       >
         {checked ? labelOn : labelOff}
       </span>

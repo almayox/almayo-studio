@@ -54,43 +54,43 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-navy-deep via-navy to-[#163566] px-5">
+    <div className="flex min-h-screen items-center justify-center app-backdrop px-5">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl shadow-black/20"
+        className="w-full max-w-md glass rounded-2xl border border-line p-8 shadow-2xl shadow-black/40"
       >
-        <p className="text-xs font-medium uppercase tracking-[0.22em] text-navy/45">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] text-fg/45">
           Admin
         </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl text-navy">
+        <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl text-fg">
           Almayo Studio
         </h1>
-        <p className="mt-2 text-sm text-navy/60">Sign in to manage portfolio content.</p>
+        <p className="mt-2 text-sm text-fg/60">Sign in to manage portfolio content.</p>
 
         <Suspense fallback={null}>
           <UnauthorizedNotice />
         </Suspense>
 
-        <label className="mt-8 block text-sm font-medium text-navy">
+        <label className="mt-8 block text-sm font-medium text-fg">
           Email
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-mist bg-foam px-3 py-2.5 outline-none ring-navy/30 focus:ring-2"
+            className="control mt-1.5 w-full "
             placeholder="you@email.com"
           />
         </label>
 
-        <label className="mt-4 block text-sm font-medium text-navy">
+        <label className="mt-4 block text-sm font-medium text-fg">
           Password
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-mist bg-foam px-3 py-2.5 outline-none ring-navy/30 focus:ring-2"
+            className="control mt-1.5 w-full "
             placeholder="••••••••"
           />
         </label>
@@ -109,7 +109,7 @@ export default function LoginPage() {
 
         <Link
           href="/forgot-password"
-          className="mt-4 block text-center text-sm text-navy/60 hover:text-navy"
+          className="mt-4 block text-center text-sm text-fg/60 hover:text-fg"
         >
           Forgot password?
         </Link>

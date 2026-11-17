@@ -8,7 +8,7 @@ import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import type { Project } from "@/lib/types";
 
 function ContractBadge({ required, status }: { required: boolean; status?: string }) {
-  if (!required) return <span className="text-xs text-navy/40">Not needed</span>;
+  if (!required) return <span className="text-xs text-fg/40">Not needed</span>;
   const tone =
     status === "signed"
       ? "bg-emerald-50 text-emerald-700"
@@ -34,9 +34,9 @@ export function ProjectsTable({
   const pagination = usePagination(projects, 10);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-mist bg-white">
+    <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
       <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-mist bg-foam text-xs uppercase tracking-wide text-navy/60">
+        <thead className="border-b border-line bg-subtle text-xs uppercase tracking-wide text-fg/60">
           <tr>
             <th className="px-4 py-3 font-medium">Title</th>
             <th className="hidden px-4 py-3 font-medium md:table-cell">Client</th>
@@ -46,14 +46,14 @@ export function ProjectsTable({
             <th className="px-4 py-3 font-medium text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-mist">
+        <tbody className="divide-y divide-line">
           {pagination.pageItems.map((project) => (
-            <tr key={project.id} className="hover:bg-foam/40">
+            <tr key={project.id} className="hover:bg-subtle/40">
               <td className="px-4 py-3">
-                <p className="font-medium text-navy">{project.title}</p>
-                <p className="text-xs text-navy/45">/{project.slug}</p>
+                <p className="font-medium text-fg">{project.title}</p>
+                <p className="text-xs text-fg/45">/{project.slug}</p>
               </td>
-              <td className="hidden px-4 py-3 text-navy/70 md:table-cell">
+              <td className="hidden px-4 py-3 text-fg/70 md:table-cell">
                 {project.client_id && clientNames[project.client_id] ? (
                   clientNames[project.client_id]
                 ) : (
@@ -77,7 +77,7 @@ export function ProjectsTable({
                   status={contractStatus[project.id]}
                 />
               </td>
-              <td className="hidden px-4 py-3 text-navy/70 sm:table-cell">
+              <td className="hidden px-4 py-3 text-fg/70 sm:table-cell">
                 {project.is_featured ? "Yes" : "-"}
               </td>
               <td className="px-4 py-3">

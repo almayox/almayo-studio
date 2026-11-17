@@ -1,39 +1,76 @@
 @import "tailwindcss";
 
-:root {
-  --navy: #0a1f44;
-  --navy-deep: #06142d;
-  --foam: #f4f7fb;
-  --mist: #d9e2f0;
-  --ink: #101828;
-  --background: var(--foam);
-  --foreground: var(--ink);
-  --control-h: 42px;
-}
+/*
+ * Dashboard theme: dark glass.
+ *
+ * Components use semantic colour names only:
+ *   text-fg        main text (use /50, /60 … for muted text)
+ *   bg-surface     glass card
+ *   bg-subtle      quieter fill inside a card (table heads, wells)
+ *   bg-muted       stronger neutral fill (skeletons, tracks)
+ *   bg-panel       opaque layer for anything floating (modals, menus)
+ *   border-line    hairline borders and dividers
+ *   text-accent    the one warm highlight colour
+ *   bg-fg + text-canvas   selected pill / inverted chip
+ *
+ * To re-skin the dashboard, change the values in this file only.
+ */
+@theme {
+  --color-canvas: #0a101c;
+  --color-fg: #eef2f8;
+  --color-surface: rgb(255 255 255 / 0.055);
+  --color-subtle: rgb(255 255 255 / 0.04);
+  --color-muted: rgb(255 255 255 / 0.12);
+  --color-panel: #131b2b;
+  --color-line: rgb(255 255 255 / 0.11);
+  --color-accent: #f0894f;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-navy: var(--navy);
-  --color-navy-deep: var(--navy-deep);
-  --color-foam: var(--foam);
-  --color-mist: var(--mist);
-  --color-ink: var(--ink);
+  /* Status colours, retuned for a dark background: the 50–200 steps are
+     translucent tints, the 700–900 steps are light enough to read as text. */
+  --color-red-50: rgb(248 113 113 / 0.12);
+  --color-red-100: rgb(248 113 113 / 0.2);
+  --color-red-200: rgb(248 113 113 / 0.32);
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-emerald-50: rgb(52 211 153 / 0.12);
+  --color-emerald-100: rgb(52 211 153 / 0.2);
+  --color-emerald-200: rgb(52 211 153 / 0.32);
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+  --color-amber-50: rgb(251 191 36 / 0.12);
+  --color-amber-100: rgb(251 191 36 / 0.2);
+  --color-amber-200: rgb(251 191 36 / 0.32);
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+  --color-blue-50: rgb(96 165 250 / 0.12);
+  --color-blue-100: rgb(96 165 250 / 0.2);
+  --color-blue-800: #bfdbfe;
+  --color-violet-50: rgb(167 139 250 / 0.12);
+  --color-violet-100: rgb(167 139 250 / 0.2);
+  --color-violet-800: #ddd6fe;
+
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
+}
+
+:root {
+  --control-h: 42px;
+  color-scheme: dark;
 }
 
 @layer base {
   body {
     margin: 0;
-    background: var(--background);
-    color: var(--foreground);
+    background: var(--color-canvas);
+    color: var(--color-fg);
     font-family: var(--font-body), system-ui, sans-serif;
     line-height: 1.6;
     font-feature-settings: "kern" 1, "liga" 1;
   }
 
-  /* Keep in @layer so Tailwind text-* utilities can override (fixes dark-on-navy links) */
+  /* Keep in @layer so Tailwind text-* utilities can override */
   a {
     color: inherit;
     text-decoration: none;
@@ -45,6 +82,53 @@
   button {
     font: inherit;
   }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-accent) 70%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+/* Fixed backdrop behind the whole app: deep navy with two soft glows. */
+.app-backdrop {
+  background-color: var(--color-canvas);
+  background-image:
+    radial-gradient(60rem 40rem at 12% 110%, rgb(240 137 79 / 0.2), transparent 60%),
+    radial-gradient(50rem 36rem at 95% -10%, rgb(56 104 190 / 0.28), transparent 62%),
+    radial-gradient(40rem 30rem at 50% 45%, rgb(20 40 84 / 0.5), transparent 70%);
+  background-attachment: fixed;
+}
+
+/* Frosted layer for the sidebar and top bars. */
+.glass {
+  background: rgb(255 255 255 / 0.045);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+
+/* Small uppercase caption used on stat tiles and chart axes. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-fg) 55%, transparent);
+}
+
+/*
+ * White "paper" island. Inside it the tokens flip back to light values, so
+ * documents that end up on white pages (contract text, QR codes) are edited
+ * and shown the way the client will see them.
+ */
+.paper {
+  --color-fg: #0a1f44;
+  --color-surface: #ffffff;
+  --color-subtle: #f4f7fb;
+  --color-muted: #d9e2f0;
+  --color-line: #d9e2f0;
+  background: #ffffff;
+  color: #0a1f44;
+  color-scheme: light;
 }
 
 /* Unified form controls */
@@ -55,26 +139,41 @@
   max-height: var(--control-h);
   padding: 0 0.75rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--mist);
-  background-color: #ffffff;
+  border: 1px solid var(--color-line);
+  background-color: rgb(255 255 255 / 0.05);
   font-size: 0.875rem;
   line-height: 1.25rem;
-  color: var(--navy);
+  color: var(--color-fg);
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.control::placeholder {
+  color: color-mix(in srgb, var(--color-fg) 38%, transparent);
 }
 
 .control:focus {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--navy) 22%, transparent);
+  border-color: color-mix(in srgb, var(--color-fg) 40%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-fg) 12%, transparent);
+}
+
+.control:disabled {
+  opacity: 0.55;
 }
 
 select.control {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2.25rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%230a1f44' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%23c5cedd' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.65rem center;
   background-size: 1rem;
+}
+
+select.control option {
+  background: var(--color-panel);
+  color: var(--color-fg);
 }
 
 textarea.control {
@@ -97,27 +196,33 @@ textarea {
   box-sizing: border-box;
 }
 
-/* Solid primary CTA: readable white on navy even if an ancestor sets color */
+/* Primary action: solid white, like a physical key on the glass. */
 .btn-primary {
   display: inline-flex;
   height: var(--control-h);
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   border-radius: 0.75rem;
-  background: var(--navy);
+  background: #ffffff;
   padding: 0 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #ffffff !important;
-  transition: background 0.15s ease;
+  color: #0a101c !important;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.4) inset, 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .btn-primary:hover {
-  background: var(--navy-deep);
+  background: #e6ebf3;
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
 }
 
 .btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .btn-secondary {
@@ -125,22 +230,28 @@ textarea {
   height: var(--control-h);
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--mist);
-  background: #ffffff;
+  border: 1px solid var(--color-line);
+  background: rgb(255 255 255 / 0.05);
   padding: 0 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--navy) !important;
-  transition: background 0.15s ease;
+  color: var(--color-fg) !important;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-secondary:hover {
-  background: var(--foam);
+  background: rgb(255 255 255 / 0.1);
+  border-color: color-mix(in srgb, var(--color-fg) 28%, transparent);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.55;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
-  color: color-mix(in srgb, var(--navy) 40%, transparent);
+  color: color-mix(in srgb, var(--color-fg) 40%, transparent);
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -155,18 +266,27 @@ textarea {
 
 .ProseMirror td,
 .ProseMirror th {
-  border: 1px solid var(--mist);
+  border: 1px solid var(--color-line);
   padding: 0.35rem 0.5rem;
   vertical-align: top;
 }
 
 .ProseMirror th {
-  background: color-mix(in srgb, var(--foam) 80%, white);
+  background: var(--color-subtle);
   font-weight: 600;
 }
 
 @media (max-width: 640px) {
   html {
     font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

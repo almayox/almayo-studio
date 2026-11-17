@@ -110,11 +110,11 @@ function SectionCard({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-xl border border-mist bg-foam/30 p-4 sm:p-5"
+      className="space-y-4 rounded-xl border border-line bg-subtle/30 p-4 sm:p-5"
     >
       <div>
-        <h3 className="font-[family-name:var(--font-display)] text-lg text-navy">{title}</h3>
-        <p className="mt-0.5 text-sm text-navy/55">{description}</p>
+        <h3 className="font-[family-name:var(--font-display)] text-lg text-fg">{title}</h3>
+        <p className="mt-0.5 text-sm text-fg/55">{description}</p>
       </div>
       {children}
       {error ? (
@@ -313,8 +313,8 @@ export function AboutSettings({ about }: { about: AboutContent }) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">About</h2>
-        <p className="mt-1 text-sm text-navy/55">
+        <h2 className="font-[family-name:var(--font-display)] text-xl text-fg">About</h2>
+        <p className="mt-1 text-sm text-fg/55">
           Each section saves independently. No scrolling to find the right button.
         </p>
       </div>
@@ -347,14 +347,14 @@ export function AboutSettings({ about }: { about: AboutContent }) {
           <StorageImage
             src={profileUrl}
             alt="Profile"
-            className="h-24 w-24 rounded-2xl object-cover ring-1 ring-mist"
+            className="h-24 w-24 rounded-2xl object-cover ring-1 ring-line"
           />
         ) : null}
         <DropUpload
           onFiles={uploadProfile}
           accept="image/*"
           disabled={busy === "profile-upload"}
-          className="flex flex-col items-center rounded-xl border-2 border-dashed border-mist bg-white px-3 py-5 text-center text-sm text-navy/70"
+          className="flex flex-col items-center rounded-xl border-2 border-dashed border-line bg-surface px-3 py-5 text-center text-sm text-fg/70"
         >
           {busy === "profile-upload"
             ? uploadStatusLabel(uploadPhase)
@@ -377,9 +377,9 @@ export function AboutSettings({ about }: { about: AboutContent }) {
         {services.map((item, index) => (
           <div
             key={index}
-            className="space-y-3 rounded-lg border border-mist bg-white p-4"
+            className="space-y-3 rounded-lg border border-line bg-surface p-4"
           >
-            <p className="text-xs font-medium uppercase tracking-wide text-navy/45">
+            <p className="text-xs font-medium uppercase tracking-wide text-fg/45">
               Service {index + 1}
             </p>
             <label className={labelClass}>
@@ -427,9 +427,9 @@ export function AboutSettings({ about }: { about: AboutContent }) {
         {experience.map((item, index) => (
           <div
             key={index}
-            className="space-y-3 rounded-lg border border-mist bg-white p-4"
+            className="space-y-3 rounded-lg border border-line bg-surface p-4"
           >
-            <p className="text-xs font-medium uppercase tracking-wide text-navy/45">
+            <p className="text-xs font-medium uppercase tracking-wide text-fg/45">
               Role {index + 1}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -507,7 +507,7 @@ export function AboutSettings({ about }: { about: AboutContent }) {
         {certs.map((item, index) => (
           <div
             key={index}
-            className="grid gap-3 rounded-lg border border-mist bg-white p-4 sm:grid-cols-3"
+            className="grid gap-3 rounded-lg border border-line bg-surface p-4 sm:grid-cols-3"
           >
             <label className={`${labelClass} sm:col-span-3`}>
               Name
