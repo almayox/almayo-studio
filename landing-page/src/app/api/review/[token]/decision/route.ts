@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rateLimit";
 import { assertReviewAccess } from "@/lib/reviewAccess";
-import { getReviewCampaignByToken } from "@/lib/reviewServer";
+import { getReviewCampaignByToken, logReviewEvent } from "@/lib/reviewServer";
 
+/**
+ * The client's final answer. Approving approves every post and locks the
+ * review; sending change requests closes this round until the studio sends
+ * the campaign again.
+ */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ token: string }> },
@@ -30,7 +35,7 @@ export async function POST(
   }
 
   if (campaign.status !== "review") {
-    return NextResponse.json({ message: "Review is already submitted." }, { status: 409 });
+    return NextResponse.json({ message: "This review is already locked." }, { status: 409 });
   }
 
   const body = await readJsonObject(request);
@@ -44,22 +49,55 @@ export async function POST(
     return NextResponse.json({ message: "Invalid decision." }, { status: 400 });
   }
 
+  const assets = (campaign.campaign_assets || []) as { approval_status: string }[];
+  const withChanges = assets.filter((asset) => asset.approval_status !== "approved" && asset.approval_status !== "pending").length;
+  if (client_decision === "approved" && withChanges > 0) {
+    return NextResponse.json(
+      { message: "Some posts still have change requests. Approve them or send the requests." },
+      { status: 400 },
+    );
+  }
+  if (client_decision === "changes_requested" && withChanges === 0) {
+    return NextResponse.json(
+      { message: "Mark at least one post as needing changes first." },
+      { status: 400 },
+    );
+  }
+
   const supabase = createAdminClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("campaigns")
     .update({
-      status: client_decision === "approved" ? "approved" : "changes_requested",
+      status: client_decision,
       client_decision,
       client_approved_by_name: author_name,
       client_approved_at: new Date().toISOString(),
     })
     .eq("id", campaign.id)
     .eq("review_token", token)
-    .eq("status", "review");
+    .eq("status", "review")
+    .select("id");
 
-  if (error) {
-    return NextResponse.json({ message: "Could not submit decision." }, { status: 500 });
+  if (error || !updated?.length) {
+    return NextResponse.json({ message: "Could not submit your decision." }, { status: 500 });
   }
+
+  if (client_decision === "approved") {
+    await supabase
+      .from("campaign_assets")
+      .update({ approval_status: "approved" })
+      .eq("campaign_id", campaign.id);
+  }
+
+  await logReviewEvent(campaign.id, {
+    kind: client_decision === "approved" ? "campaign_approved" : "campaign_changes_requested",
+    actor: author_name,
+    detail:
+      client_decision === "approved"
+        ? `All ${assets.length} posts approved. Review locked.`
+        : `${withChanges} post(s) need changes.`,
+    ip,
+  });
 
   return NextResponse.json({ success: true });
 }

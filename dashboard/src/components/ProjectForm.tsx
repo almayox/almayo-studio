@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { SortableMediaGrid } from "@/components/SortableMediaGrid";
-import { ThumbnailPositionPicker } from "@/components/ThumbnailPositionPicker";
+import { VideoFramePicker } from "@/components/VideoFramePicker";
 import {
   fieldClass,
   primaryBtnClass,
@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/PageChrome";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { createClient } from "@/lib/supabase/client";
-import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
+import { isPdf, pdfToPageImages, type PdfPage } from "@/lib/pdfPages";
+import { parseYouTubeLink, youTubeThumbnail } from "@/lib/youtube";
+import { GLB_MIME } from "@/lib/fileScan";
+import { isGlbFile, uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
+import { CropPositionDialog } from "@/components/CropPositionDialog";
+import { ModelThumbnailPicker } from "@/components/ModelThumbnailPicker";
 import type { Catalog, Client, Project, ProjectMedia } from "@/lib/types";
 import { slugify } from "@/lib/types";
 
@@ -34,7 +39,48 @@ type PendingMedia = {
   url: string;
   media_type: string;
   mime_type: string | null;
+  poster_url?: string | null;
+  pages?: PdfPage[] | null;
+  rtl?: boolean | null;
+  group_key?: string | null;
+  poster_position?: string | null;
 };
+
+/** A file or link ready to become a project_media row. */
+type UploadedItem = {
+  url: string;
+  media_type: string;
+  mime_type: string | null;
+  pages?: PdfPage[];
+  rtl?: boolean;
+  poster_url?: string;
+};
+
+/** The columns a project_media row gets beyond the basics, only when they are set. */
+function extraColumns(item: {
+  poster_url?: string | null;
+  pages?: PdfPage[] | null;
+  rtl?: boolean | null;
+  group_key?: string | null;
+  poster_position?: string | null;
+}) {
+  return {
+    ...(item.poster_position ? { poster_position: item.poster_position } : {}),
+    ...(item.poster_url ? { poster_url: item.poster_url } : {}),
+    ...(item.pages ? { pages: item.pages } : {}),
+    ...(item.rtl ? { rtl: true } : {}),
+    ...(item.group_key ? { group_key: item.group_key } : {}),
+  };
+}
+
+const DISPLAY_STYLES = [
+  { value: "gallery", label: "Standard gallery", hint: "Images and videos in rows, each in its own shape." },
+  { value: "social", label: "Social media grid", hint: "A profile with a grid of three. Tap a post to open it; carousels swipe." },
+  { value: "video", label: "Video player", hint: "A large player with a red progress bar and the other videos listed beside it." },
+];
+
+const SETUP_NEEDED =
+  "The database needs an update first: run supabase/schema_project_video_thumbnails.sql in Supabase.";
 
 export function ProjectForm({
   catalogs,
@@ -57,13 +103,11 @@ export function ProjectForm({
   const [contractRequired, setContractRequired] = useState(
     project?.contract_required ?? false,
   );
-  const [thumbnailUrl, setThumbnailUrl] = useState(project?.thumbnail_url ?? "");
-  const [thumbnailPosition, setThumbnailPosition] = useState(
-    project?.thumbnail_position ?? "50% 50%",
-  );
   const [isVisible, setIsVisible] = useState(project?.is_visible ?? true);
   const [isFeatured, setIsFeatured] = useState(project?.is_featured ?? false);
   const [sortOrder, setSortOrder] = useState(project?.sort_order ?? 0);
+  const [displayStyle, setDisplayStyle] = useState(project?.display_style || "gallery");
+  const [youTubeLink, setYouTubeLink] = useState("");
   const [gallery, setGallery] = useState<ProjectMedia[]>(media);
   const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +115,14 @@ export function ProjectForm({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
+  /** Progress wording for a PDF, which the usual phases do not describe. */
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
+  /** The video whose thumbnail is being chosen. */
+  const [posterFor, setPosterFor] = useState<ProjectMedia | null>(null);
+  /** The item whose crop is being chosen, with the picture to show for it. */
+  const [cropFor, setCropFor] = useState<{ id: string; image: string; position?: string | null } | null>(
+    null,
+  );
 
   const autoSlug = useMemo(() => slugify(title), [title]);
 
@@ -83,22 +135,61 @@ export function ProjectForm({
     });
   }
 
+  /** A PDF becomes one image per page; the PDF file itself is not stored. */
+  async function uploadPdf(file: File): Promise<UploadedItem> {
+    setUploadNote("Reading PDF…");
+    const { pages: images, rtl } = await pdfToPageImages(file, (done, total) =>
+      setUploadNote(`Preparing page ${Math.min(done + 1, total)} of ${total}…`),
+    );
+    const pages: PdfPage[] = new Array(images.length);
+    let next = 0;
+    let done = 0;
+    setUploadNote(`Uploading page 1 of ${images.length}…`);
+    async function worker() {
+      while (next < images.length) {
+        const index = next;
+        next += 1;
+        const image = images[index];
+        const url = await uploadStudioFile(image.file, {
+          bucket: "project-media",
+          folder: "projects",
+          optimizeImage: false,
+        });
+        pages[index] = { url, width: image.width, height: image.height };
+        done += 1;
+        setUploadNote(`Uploaded ${done} of ${images.length} pages…`);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(3, images.length) }, worker));
+    return { url: pages[0].url, media_type: "pdf", mime_type: "application/pdf", pages, rtl };
+  }
+
   async function uploadFiles(files: FileList | File[]) {
     const list = Array.from(files);
-    if (!list.length) return [] as { url: string; media_type: string; mime_type: string | null }[];
+    if (!list.length) return [] as UploadedItem[];
 
     setUploading(true);
     setUploadProgress(null);
     setUploadPhase("uploading");
     setError(null);
     try {
-      const uploaded = [];
+      const uploaded: UploadedItem[] = [];
       for (const file of list) {
+        if (isPdf(file)) {
+          uploaded.push(await uploadPdf(file));
+          setUploadNote(null);
+          continue;
+        }
         const url = await uploadFile(file);
+        if (isGlbFile(file)) {
+          uploaded.push({ url, media_type: "model", mime_type: GLB_MIME });
+          continue;
+        }
         uploaded.push({
           url,
           media_type: file.type.startsWith("video/") ? "video" : "image",
-          mime_type: file.type || null,
+          // A large video is stored as a compressed MP4, whatever it was.
+          mime_type: /\.mp4$/i.test(url) ? "video/mp4" : file.type || null,
         });
       }
       return uploaded;
@@ -106,78 +197,158 @@ export function ProjectForm({
       setUploading(false);
       setUploadProgress(null);
       setUploadPhase(null);
+      setUploadNote(null);
     }
+  }
+
+  /** Adds uploaded files or links to the gallery: saved at once on an existing project. */
+  async function addMedia(uploaded: UploadedItem[]) {
+    if (!uploaded.length) return;
+    if (project?.id) {
+      const supabase = createClient();
+      const created: ProjectMedia[] = [];
+      for (const [index, item] of uploaded.entries()) {
+        const { data, error: insertError } = await supabase
+          .from("project_media")
+          .insert({
+            project_id: project.id,
+            url: item.url,
+            media_type: item.media_type,
+            mime_type: item.mime_type,
+            sort_order: gallery.length + index,
+            ...extraColumns(item),
+          })
+          .select("*")
+          .single();
+        if (insertError) throw insertError;
+        created.push(data as ProjectMedia);
+      }
+      setGallery((prev) => [...prev, ...created]);
+      return;
+    }
+    setPendingMedia((prev) => [
+      ...prev,
+      ...uploaded.map((item) => ({
+        tempId: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        ...item,
+      })),
+    ]);
+  }
+
+  function showMediaError(err: unknown, fallback: string) {
+    const message = (err as { message?: string } | null)?.message || fallback;
+    setError(/pages|rtl|group_key|poster_url|poster_position/.test(message) ? SETUP_NEEDED : message);
   }
 
   async function onGalleryFiles(files: FileList) {
     try {
-      const uploaded = await uploadFiles(files);
-      if (!uploaded.length) return;
-
-      if (!thumbnailUrl) {
-        const firstImage = uploaded.find((u) => u.media_type === "image");
-        if (firstImage) setThumbnailUrl(firstImage.url);
-      }
-
-      if (project?.id) {
-        const supabase = createClient();
-        const created: ProjectMedia[] = [];
-        for (const [index, item] of uploaded.entries()) {
-          const { data, error: insertError } = await supabase
-            .from("project_media")
-            .insert({
-              project_id: project.id,
-              url: item.url,
-              media_type: item.media_type,
-              mime_type: item.mime_type,
-              sort_order: gallery.length + index,
-            })
-            .select("*")
-            .single();
-          if (insertError) throw insertError;
-          created.push(data as ProjectMedia);
-        }
-        setGallery((prev) => [...prev, ...created]);
-        return;
-      }
-
-      setPendingMedia((prev) => [
-        ...prev,
-        ...uploaded.map((item) => ({
-          tempId: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          ...item,
-        })),
-      ]);
+      await addMedia(await uploadFiles(files));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      showMediaError(err, "Upload failed");
     }
+  }
+
+  /** A YouTube video is kept as its link; the site shows YouTube's own player. */
+  async function addYouTubeLink() {
+    const parsed = parseYouTubeLink(youTubeLink);
+    if (!parsed) {
+      setError("That does not look like a YouTube link. Paste the video's address from YouTube.");
+      return;
+    }
+    setError(null);
+    try {
+      await addMedia([
+        {
+          url: youTubeLink.trim(),
+          media_type: "youtube",
+          mime_type: null,
+          poster_url: youTubeThumbnail(parsed.id),
+        },
+      ]);
+      setYouTubeLink("");
+    } catch (err) {
+      showMediaError(err, "The link could not be added");
+    }
+  }
+
+  /** Changes fields on gallery items, on screen and, for a saved project, in the database. */
+  async function patchMedia(patches: { id: string; values: Partial<ProjectMedia> }[]) {
+    if (!patches.length) return;
+    const byId = new Map(patches.map((patch) => [patch.id, patch.values]));
+    if (!project?.id) {
+      setPendingMedia((prev) =>
+        prev.map((item) => (byId.has(item.tempId) ? { ...item, ...byId.get(item.tempId) } : item)),
+      );
+      return;
+    }
+    const supabase = createClient();
+    const results = await Promise.all(
+      patches.map((patch) =>
+        supabase.from("project_media").update(patch.values).eq("id", patch.id),
+      ),
+    );
+    const failed = results.find((result) => result.error);
+    if (failed?.error) return showMediaError(failed.error, "Saving failed");
+    setGallery((prev) =>
+      prev.map((item) => (byId.has(item.id) ? { ...item, ...byId.get(item.id) } : item)),
+    );
+  }
+
+  /** Joins an item to the post before it (a carousel), or takes it out again. */
+  function toggleJoin(item: ProjectMedia) {
+    const index = displayGallery.findIndex((entry) => entry.id === item.id);
+    const previous = displayGallery[index - 1];
+    if (!previous) return;
+    if (item.group_key && item.group_key === previous.group_key) {
+      // Leaving: this item, and what followed it in the post, become a post of their own.
+      const rest = displayGallery
+        .slice(index + 1)
+        .filter((entry) => entry.group_key === item.group_key);
+      const key = rest.length ? crypto.randomUUID() : null;
+      void patchMedia(
+        [item, ...rest].map((entry) => ({ id: entry.id, values: { group_key: key } })),
+      );
+      return;
+    }
+    const key = previous.group_key || crypto.randomUUID();
+    void patchMedia(
+      [previous, item].map((entry) => ({ id: entry.id, values: { group_key: key } })),
+    );
+  }
+
+  /** Saves a video's own thumbnail image. */
+  async function savePoster(item: ProjectMedia, posterUrl: string) {
+    if (item.id.startsWith("temp-")) {
+      setPendingMedia((prev) =>
+        prev.map((m) => (m.tempId === item.id ? { ...m, poster_url: posterUrl } : m)),
+      );
+      return;
+    }
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from("project_media")
+      .update({ poster_url: posterUrl })
+      .eq("id", item.id);
+    if (updateError) {
+      setError(
+        /poster_url/.test(updateError.message)
+          ? "The database needs an update before video thumbnails can be saved: run supabase/schema_project_video_thumbnails.sql in Supabase."
+          : updateError.message,
+      );
+      return;
+    }
+    setGallery((prev) => prev.map((m) => (m.id === item.id ? { ...m, poster_url: posterUrl } : m)));
   }
 
   async function removeGalleryItem(id: string) {
     if (id.startsWith("temp-")) {
-      setPendingMedia((prev) => {
-        const next = prev.filter((item) => item.tempId !== id);
-        const removed = prev.find((item) => item.tempId === id);
-        if (removed && thumbnailUrl === removed.url) {
-          const fallback = next.find((m) => m.media_type === "image")?.url || "";
-          setThumbnailUrl(fallback);
-        }
-        return next;
-      });
+      setPendingMedia((prev) => prev.filter((item) => item.tempId !== id));
       return;
     }
 
     const supabase = createClient();
     await supabase.from("project_media").delete().eq("id", id);
-    setGallery((prev) => {
-      const removed = prev.find((item) => item.id === id);
-      const next = prev.filter((item) => item.id !== id);
-      if (removed && thumbnailUrl === removed.url) {
-        const fallback = next.find((m) => m.media_type === "image")?.url || "";
-        setThumbnailUrl(fallback);
-      }
-      return next;
-    });
+    setGallery((prev) => prev.filter((item) => item.id !== id));
   }
 
   async function persistReorder(items: ProjectMedia[]) {
@@ -211,11 +382,15 @@ export function ProjectForm({
         catalog_id: catalogId || null,
         client_id: clientId,
         contract_required: contractRequired,
-        thumbnail_url: thumbnailUrl || null,
-        thumbnail_position: thumbnailPosition || "50% 50%",
+        thumbnail_url: coverUrl,
+        thumbnail_position: coverPosition,
         is_visible: isVisible,
         is_featured: isFeatured,
         sort_order: Number(sortOrder) || 0,
+        // Left out while it is the default, so saving works before the database update.
+        ...(displayStyle !== "gallery" || project?.display_style
+          ? { display_style: displayStyle }
+          : {}),
       };
 
       if (isEdit && project) {
@@ -244,6 +419,7 @@ export function ProjectForm({
             media_type: item.media_type,
             mime_type: item.mime_type,
             sort_order: index,
+            ...extraColumns(item),
           })),
         );
         if (mediaError) throw mediaError;
@@ -252,7 +428,8 @@ export function ProjectForm({
       router.push(`/projects/${data.id}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      const message = (err as { message?: string } | null)?.message || "Save failed";
+      setError(/display_style|pages|rtl|group_key|poster_url/.test(message) ? SETUP_NEEDED : message);
       setLoading(false);
     }
   }
@@ -266,8 +443,38 @@ export function ProjectForm({
         media_type: item.media_type,
         mime_type: item.mime_type,
         caption: null,
+        poster_url: item.poster_url ?? null,
+        pages: item.pages ?? null,
+        rtl: item.rtl ?? false,
+        group_key: item.group_key ?? null,
+        poster_position: item.poster_position ?? null,
         sort_order: 0,
       }));
+
+  // The picture shown for the project in lists: the first image, or the first
+  // video's thumbnail, in gallery order.
+  const coverItem = displayGallery.find((item) =>
+    ["video", "youtube", "model"].includes(item.media_type) ? item.poster_url : item.url,
+  );
+  const coverUrl = coverItem
+    ? ((["video", "youtube", "model"].includes(coverItem.media_type)
+        ? coverItem.poster_url
+        : coverItem.url) ?? null)
+    : null;
+  const coverPosition = coverItem?.poster_position || "50% 50%";
+
+  // On a saved project the gallery saves as it changes, so the cover follows it.
+  // Starts from what is on screen, so only a change to the gallery writes.
+  const savedCover = useRef(`${coverUrl} ${coverPosition}`);
+  const projectId = project?.id;
+  useEffect(() => {
+    if (!projectId || savedCover.current === `${coverUrl} ${coverPosition}`) return;
+    savedCover.current = `${coverUrl} ${coverPosition}`;
+    void createClient()
+      .from("projects")
+      .update({ thumbnail_url: coverUrl, thumbnail_position: coverPosition })
+      .eq("id", projectId);
+  }, [projectId, coverUrl, coverPosition]);
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6">
@@ -434,17 +641,46 @@ export function ProjectForm({
         </div>
       </div>
 
+      <div className="rounded-xl border border-line bg-surface p-5">
+        <p className="text-sm font-medium text-fg">Look of the project page</p>
+        <p className="mt-1 text-xs text-fg/50">
+          How visitors see this project. A PDF always opens as a book, whichever you choose.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {DISPLAY_STYLES.map((style) => (
+            <label
+              key={style.value}
+              className={`cursor-pointer rounded-lg border p-3 transition ${
+                displayStyle === style.value
+                  ? "border-fg bg-fg/5"
+                  : "border-line hover:border-fg/30"
+              }`}
+            >
+              <input
+                type="radio"
+                name="display-style"
+                value={style.value}
+                checked={displayStyle === style.value}
+                onChange={() => setDisplayStyle(style.value)}
+                className="sr-only"
+              />
+              <span className="block text-sm font-medium text-fg">{style.label}</span>
+              <span className="mt-1 block text-xs text-fg/55">{style.hint}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
         <div>
           <p className="text-sm font-medium text-fg">Project media</p>
           <p className="mt-1 text-xs text-fg/50">
-            Drag & drop to upload. Drag an image to reorder. Click ★ to set the thumbnail.
+            Drag & drop to upload. Drag to reorder. “Set video thumbnail” chooses the image shown on that video before it plays. The first item is the picture shown for this project in lists.{displayStyle === "social" ? " In the social grid every item is a post; press “Join previous” to make a carousel." : ""}
           </p>
         </div>
 
         <SortableMediaGrid
           items={displayGallery}
-          thumbnailUrl={thumbnailUrl}
           onReorder={(items) => {
             if (project?.id) {
               void persistReorder(items);
@@ -455,6 +691,11 @@ export function ProjectForm({
                   url: item.url,
                   media_type: item.media_type,
                   mime_type: item.mime_type,
+                  poster_url: item.poster_url,
+                  pages: item.pages,
+                  rtl: item.rtl,
+                  group_key: item.group_key,
+                  poster_position: item.poster_position,
                 })),
               );
             }
@@ -462,48 +703,91 @@ export function ProjectForm({
           onDelete={(id) => {
             void removeGalleryItem(id);
           }}
-          onSetThumbnail={(url) => setThumbnailUrl(url)}
+          onEditPoster={setPosterFor}
+          onCrop={(item) => {
+            const image = item.media_type === "image" ? item.url : item.poster_url;
+            if (image) setCropFor({ id: item.id, image, position: item.poster_position });
+          }}
+          grouping={displayStyle === "social"}
+          onToggleJoin={toggleJoin}
+          onToggleRtl={(item) => void patchMedia([{ id: item.id, values: { rtl: !item.rtl } }])}
         />
 
         <DropUpload
           onFiles={onGalleryFiles}
-          accept="image/*,video/*"
+          accept="image/*,video/*,application/pdf,.glb,model/gltf-binary"
           multiple
           disabled={uploading}
           className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-subtle px-4 py-10 text-center transition hover:border-fg/30"
         >
           <span className="font-[family-name:var(--font-display)] text-lg text-fg">
             {uploading
-              ? uploadStatusLabel(uploadPhase, uploadProgress)
+              ? uploadNote || uploadStatusLabel(uploadPhase, uploadProgress)
               : "Drop files here or click to upload"}
           </span>
-          <span className="text-xs text-fg/50">PNG, JPG, WEBP, MP4. Multiple files supported.</span>
+          <span className="text-xs text-fg/50">PNG, JPG, WEBP, MP4, MOV, PDF, GLB. Multiple files supported. Videos over 25 MB are compressed for you; a PDF is shown as a book and a GLB as a 3D model visitors can turn.</span>
         </DropUpload>
 
-        {thumbnailUrl ? (
-          <div>
-            <p className="text-sm font-medium text-fg">Thumbnail preview</p>
-            <ThumbnailPositionPicker
-              url={thumbnailUrl}
-              position={thumbnailPosition}
-              onChange={setThumbnailPosition}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setThumbnailUrl("");
-                setThumbnailPosition("50% 50%");
-              }}
-              className="mt-2 text-xs text-fg/55 underline hover:text-fg"
-            >
-              Clear thumbnail
-            </button>
-          </div>
-        ) : (
-          <p className="text-sm text-fg/50">
-            No thumbnail selected yet. Upload media, then click ★ on one image.
-          </p>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="url"
+            inputMode="url"
+            value={youTubeLink}
+            onChange={(e) => setYouTubeLink(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              void addYouTubeLink();
+            }}
+            placeholder="Or paste a YouTube link (video or Short)"
+            aria-label="YouTube link"
+            className={fieldClass}
+          />
+          <button
+            type="button"
+            onClick={() => void addYouTubeLink()}
+            disabled={!youTubeLink.trim()}
+            className={`shrink-0 ${secondaryBtnClass}`}
+          >
+            Add YouTube video
+          </button>
+        </div>
+
+        {cropFor ? (
+          <CropPositionDialog
+            imageUrl={cropFor.image}
+            position={cropFor.position}
+            onClose={() => setCropFor(null)}
+            onSave={(value) => {
+              void patchMedia([{ id: cropFor.id, values: { poster_position: value } }]);
+              setCropFor(null);
+            }}
+          />
+        ) : null}
+        {posterFor?.media_type === "model" ? (
+          <ModelThumbnailPicker
+            modelUrl={posterFor.url}
+            onClose={() => setPosterFor(null)}
+            onPicked={(url) => {
+              void savePoster(posterFor, url);
+              setPosterFor(null);
+              // Straight on to choosing which part of the new picture shows.
+              setCropFor({ id: posterFor.id, image: url });
+            }}
+          />
+        ) : null}
+        {posterFor && posterFor.media_type !== "model" ? (
+          <VideoFramePicker
+            videoUrl={posterFor.url}
+            onClose={() => setPosterFor(null)}
+            onPicked={(url) => {
+              void savePoster(posterFor, url);
+              setPosterFor(null);
+              // Straight on to choosing which part of the new picture shows.
+              setCropFor({ id: posterFor.id, image: url });
+            }}
+          />
+        ) : null}
       </div>
 
       {error ? (
@@ -519,7 +803,7 @@ export function ProjectForm({
           {loading
             ? "Saving…"
             : uploading
-              ? uploadStatusLabel(uploadPhase, uploadProgress)
+              ? uploadNote || uploadStatusLabel(uploadPhase, uploadProgress)
               : "Save project"}
         </button>
         <button

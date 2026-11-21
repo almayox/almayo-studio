@@ -30,7 +30,11 @@ const ALLOWED_MIME_PREFIXES = ["image/", "video/", "application/pdf", "audio/"];
 // SVG is intentionally not allowed: it can carry scripts and is served as-is.
 const BLOCKED_MIME = new Set(["image/svg+xml", "text/html", "application/xhtml+xml"]);
 
+/** A 3D model exported as GLB (binary glTF), e.g. from Blender. */
+export const GLB_MIME = "model/gltf-binary";
+
 const ALLOWED_MIME_EXACT = new Set([
+  GLB_MIME,
   "application/zip",
   "application/x-zip-compressed",
 ]);
@@ -72,7 +76,11 @@ export function validateUploadBasics(file: File, maxBytes: number): ScanResult {
 async function detectMime(buffer: Uint8Array) {
   const { fileTypeFromBuffer } = await import("file-type");
   const detected = await fileTypeFromBuffer(buffer);
-  return detected?.mime || null;
+  if (detected?.mime) return detected.mime;
+  // A GLB file starts with the letters "glTF".
+  const isGlb =
+    buffer[0] === 0x67 && buffer[1] === 0x6c && buffer[2] === 0x54 && buffer[3] === 0x46;
+  return isGlb ? GLB_MIME : null;
 }
 
 export async function scanFileBuffer(

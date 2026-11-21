@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
     // and inner pages get their own canonical instead of inheriting the home URL.
     alternates: { canonical: "./" },
     // Icons and the link-preview image come from the static file conventions
-    // (icon.tsx, apple-icon.tsx, opengraph-image.tsx).
+    // (icon.png, apple-icon.png, opengraph-image.tsx).
     openGraph: {
       title: settings.site_name,
       description: settings.hero_tagline,

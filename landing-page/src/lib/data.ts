@@ -258,11 +258,18 @@ export async function getCatalogBySlug(slug: string): Promise<{
   };
 }
 
+/** How a project page is laid out. Unknown or missing values fall back to the gallery. */
+export type DisplayStyle = "gallery" | "social" | "video";
+
 export async function getProjectBySlug(slug: string): Promise<{
   project: ProjectWithCatalog | null;
   media: ProjectMedia[];
+  displayStyle: DisplayStyle;
+  /** The client's logo, for the looks that show a profile picture. */
+  clientLogo: string | null;
 }> {
-  if (!hasSupabaseEnv()) return { project: null, media: [] };
+  const none = { project: null, media: [], displayStyle: "gallery" as const, clientLogo: null };
+  if (!hasSupabaseEnv()) return none;
   const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
@@ -271,23 +278,47 @@ export async function getProjectBySlug(slug: string): Promise<{
     .eq("is_visible", true)
     .maybeSingle();
 
-  if (!project) return { project: null, media: [] };
+  if (!project) return none;
+  const projectId = (project as unknown as Project).id;
+  const clientId = (project as unknown as Project).client_id;
+
+  // Asked for on their own, so the page still works if the database has not
+  // been given the display_style column yet, or the client is not public.
+  const [{ data: styleRow }, { data: clientRow }] = await Promise.all([
+    supabase.from("projects").select("display_style").eq("id", projectId).maybeSingle(),
+    clientId
+      ? supabase.from("clients").select("logo_url").eq("id", clientId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const style = (styleRow as { display_style?: string } | null)?.display_style;
+  const logo = (clientRow as { logo_url?: string | null } | null)?.logo_url;
 
   const { data: media } = await supabase
     .from("project_media")
     .select("*")
-    .eq("project_id", (project as unknown as Project).id)
+    .eq("project_id", projectId)
     .order("sort_order", { ascending: true });
 
   const signedMedia = await Promise.all(
     ((media as ProjectMedia[]) ?? []).map(async (item) => ({
       ...item,
       url: (await publicAssetUrl(item.url)) || item.url,
+      poster_url: item.poster_url ? await publicAssetUrl(item.poster_url) : null,
+      pages: Array.isArray(item.pages)
+        ? await Promise.all(
+            item.pages.map(async (page) => ({
+              ...page,
+              url: (await publicAssetUrl(page.url)) || page.url,
+            })),
+          )
+        : null,
     })),
   );
 
   return {
     project: await signProject(project as unknown as ProjectWithCatalog),
     media: signedMedia,
+    displayStyle: style === "social" || style === "video" ? style : "gallery",
+    clientLogo: logo ? await publicAssetUrl(logo) : null,
   };
 }

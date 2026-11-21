@@ -9,6 +9,7 @@ export function Modal({
   description,
   children,
   wide,
+  extraWide,
 }: {
   open: boolean;
   onClose: () => void;
@@ -16,6 +17,8 @@ export function Modal({
   description?: string;
   children: ReactNode;
   wide?: boolean;
+  /** For dialogs that show media beside a form. */
+  extraWide?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -46,7 +49,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         className={`relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-line bg-panel shadow-2xl shadow-black/50 sm:rounded-2xl ${
-          wide ? "sm:max-w-2xl" : "sm:max-w-lg"
+          extraWide ? "sm:max-w-5xl" : wide ? "sm:max-w-2xl" : "sm:max-w-lg"
         }`}
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-line bg-panel px-5 py-4">

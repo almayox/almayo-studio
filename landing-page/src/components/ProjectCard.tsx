@@ -16,7 +16,7 @@ export function ProjectCard({
       href={`/projects/${project.slug}`}
       className="group block h-full overflow-hidden rounded-2xl border border-mist bg-white transition duration-300 hover:-translate-y-0.5 hover:border-navy/25 hover:shadow-[0_20px_40px_-28px_rgba(10,31,68,0.55)]"
     >
-      <div className="relative aspect-video overflow-hidden bg-navy/5">
+      <div className="relative aspect-[3/4] overflow-hidden bg-navy/5">
         {project.thumbnail_url ? (
           <RemoteImage
             src={project.thumbnail_url}

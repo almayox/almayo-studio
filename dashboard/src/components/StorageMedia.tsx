@@ -13,7 +13,7 @@ import { parseSupabaseStorageUrl, resolveStorageUrl } from "@/lib/storage";
  * Files live in private storage. Stored URLs are turned into short-lived signed
  * URLs for display; anything else (blob previews, external links) is used as is.
  */
-function useStorageUrl(url: string | null | undefined) {
+export function useStorageUrl(url: string | null | undefined) {
   const needsSigning = Boolean(url && parseSupabaseStorageUrl(url));
   const [signed, setSigned] = useState<{ source: string; url: string | null } | null>(null);
 
@@ -51,7 +51,8 @@ type VideoProps = VideoHTMLAttributes<HTMLVideoElement> & {
 export function StorageVideo({ src, ...props }: VideoProps) {
   const resolved = useStorageUrl(src);
   if (!resolved) return null;
-  return <video src={resolved} {...props} />;
+  // "#t=0.1" makes the browser show a frame instead of a black box before playing.
+  return <video src={resolved.includes("#") ? resolved : `${resolved}#t=0.1`} {...props} />;
 }
 
 type LinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {

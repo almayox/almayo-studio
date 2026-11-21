@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, clientIp, readJsonObject, stringField } from "@/lib/rateLimit";
 import { assertReviewAccess } from "@/lib/reviewAccess";
-import { getReviewCampaignByToken } from "@/lib/reviewServer";
+import { getReviewCampaignByToken, logReviewEvent } from "@/lib/reviewServer";
 
 const ALLOWED = new Set(["approved", "changes_requested"]);
 
@@ -14,7 +14,7 @@ export async function POST(
   const ip = clientIp(request);
   const limit = await checkRateLimit({
     key: `review-approval:${ip}:${token}`,
-    limit: 60,
+    limit: 120,
     windowMs: 15 * 60 * 1000,
   });
   if (!limit.allowed) {
@@ -32,26 +32,30 @@ export async function POST(
   }
 
   if (campaign.status !== "review") {
-    return NextResponse.json({ message: "Review is closed." }, { status: 409 });
+    return NextResponse.json({ message: "This review is locked." }, { status: 409 });
   }
 
   const body = await readJsonObject(request);
   const assetId = stringField(body?.assetId, 64);
   const approval_status = stringField(body?.approval_status, 40);
-  if (!assetId || !approval_status || !ALLOWED.has(approval_status)) {
+  const author_name = stringField(body?.author_name, 120);
+  if (!assetId || !ALLOWED.has(approval_status)) {
     return NextResponse.json({ message: "Invalid request." }, { status: 400 });
+  }
+  if (!author_name) {
+    return NextResponse.json({ message: "Enter your name first." }, { status: 400 });
   }
 
   const supabase = createAdminClient();
   const { data: asset } = await supabase
     .from("campaign_assets")
-    .select("id, campaign_id")
+    .select("id, title")
     .eq("id", assetId)
     .eq("campaign_id", campaign.id)
     .maybeSingle();
 
   if (!asset) {
-    return NextResponse.json({ message: "Asset not found." }, { status: 404 });
+    return NextResponse.json({ message: "Post not found." }, { status: 404 });
   }
 
   const { error } = await supabase
@@ -61,8 +65,16 @@ export async function POST(
     .eq("campaign_id", campaign.id);
 
   if (error) {
-    return NextResponse.json({ message: "Could not update asset." }, { status: 500 });
+    return NextResponse.json({ message: "Could not save your answer." }, { status: 500 });
   }
+
+  await logReviewEvent(campaign.id, {
+    kind: approval_status === "approved" ? "post_approved" : "post_changes_requested",
+    assetId,
+    actor: author_name,
+    detail: asset.title,
+    ip,
+  });
 
   return NextResponse.json({ success: true });
 }

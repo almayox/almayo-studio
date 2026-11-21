@@ -1,112 +1,114 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CampaignForm } from "@/components/campaigns/CampaignForm";
-import { CampaignPanel } from "@/components/campaigns/CampaignPanel";
-import { CampaignsTable } from "@/components/campaigns/CampaignsTable";
-import { useCampaignWrite } from "@/components/campaigns/hooks";
+import { PostThumb } from "@/components/campaigns/PostThumb";
 import { filterBySearch, ListFilters } from "@/components/ui/ListFilters";
-import { EmptyState, PageHeader, SummaryCards, primaryBtnClass } from "@/components/ui/PageChrome";
-import { PaginationControls, usePagination } from "@/components/ui/Pagination";
+import { EmptyState, PageHeader, primaryBtnClass } from "@/components/ui/PageChrome";
 import {
-  CAMPAIGN_STATUS_OPTIONS,
-  deleteCampaign,
-  reviewUrl,
+  STAGES,
+  STAGE_TONES,
+  approvalCounts,
+  campaignStage,
+  monthLabel,
+  stageLabel,
   type CampaignRow,
 } from "@/lib/campaigns";
-import { createClient } from "@/lib/supabase/client";
+import { bySortOrder } from "@/lib/lineItems";
 import type { Client } from "@/lib/types";
+
+function CampaignCard({ campaign, unseen }: { campaign: CampaignRow; unseen: number }) {
+  const assets = bySortOrder(campaign.campaign_assets);
+  const counts = approvalCounts(assets);
+  const stage = campaignStage(campaign);
+
+  return (
+    <Link
+      href={`/campaigns/${campaign.id}`}
+      className={`relative overflow-hidden rounded-2xl border bg-surface transition hover:border-fg/25 ${
+        unseen ? "border-fg/50" : "border-line"
+      }`}
+    >
+      {unseen ? (
+        <span className="absolute right-3 top-3 z-10 rounded-full bg-fg px-2.5 py-1 text-[11px] font-semibold text-canvas shadow">
+          {unseen} new from client
+        </span>
+      ) : null}
+      <div className="grid grid-cols-3 gap-px bg-line">
+        {[0, 1, 2].map((index) => (
+          <PostThumb key={index} asset={assets[index]} />
+        ))}
+      </div>
+      <div className="space-y-2 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate font-medium text-fg">{campaign.title}</p>
+            <p className="truncate text-xs text-fg/55">
+              {[campaign.clients?.name || "No client", monthLabel(campaign.month)]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
+          <span
+            className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium ${STAGE_TONES[stage]}`}
+          >
+            {stageLabel(stage)}
+          </span>
+        </div>
+        <p className="text-xs text-fg/55">
+          {counts.total === 0
+            ? "No posts yet"
+            : `${counts.approved} of ${counts.total} posts approved`}
+          {counts.changes ? ` · ${counts.changes} need changes` : ""}
+        </p>
+      </div>
+    </Link>
+  );
+}
 
 export function CampaignsManager({
   initialCampaigns,
   clients,
-  projects,
+  unseen,
   fetchError,
 }: {
   initialCampaigns: CampaignRow[];
-  clients: Client[];
-  projects: { id: string; title: string }[];
+  clients: Pick<Client, "id" | "name">[];
+  /** Unseen client actions per campaign id. */
+  unseen: Record<string, number>;
   fetchError?: string | null;
 }) {
   const router = useRouter();
-  /** The open form: `editing` is null for a new campaign. */
-  const [form, setForm] = useState<{ editing: CampaignRow | null } | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [error, setError] = useState<string | null>(null);
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
-  const write = useCampaignWrite(setError);
+  const [stageFilter, setStageFilter] = useState("all");
 
-  const campaign = useMemo(
-    () => initialCampaigns.find((c) => c.id === selectedId) || null,
-    [initialCampaigns, selectedId],
-  );
-
-  const filteredCampaigns = useMemo(() => {
-    let rows = filterBySearch(initialCampaigns, search, (row) =>
-      [row.title, row.clients?.name, row.month, row.platforms, row.status]
+  const campaigns = useMemo(() => {
+    const rows = filterBySearch(initialCampaigns, search, (row) =>
+      [row.title, row.clients?.name, row.month, monthLabel(row.month), row.platforms]
         .filter(Boolean)
         .join(" "),
     );
-    if (statusFilter !== "all") {
-      rows = rows.filter((row) => row.status === statusFilter);
-    }
-    return rows;
-  }, [initialCampaigns, search, statusFilter]);
-
-  const pagination = usePagination(filteredCampaigns, 10);
-
-  function openForm(editing: CampaignRow | null) {
-    setError(null);
-    setForm({ editing });
-  }
-
-  async function remove(row: CampaignRow) {
-    if (!window.confirm("Delete this campaign?")) return;
-    setError(null);
-    const deleteError = await deleteCampaign(createClient(), row.id);
-    if (deleteError) return setError(deleteError);
-    if (selectedId === row.id) setSelectedId(null);
-    router.refresh();
-  }
-
-  async function copyLink(reviewToken: string) {
-    const link = reviewUrl(reviewToken);
-    try {
-      await navigator.clipboard.writeText(link);
-    } catch {
-      setError(`Could not copy automatically. Review link: ${link}`);
-      return;
-    }
-    setCopiedToken(reviewToken);
-    setTimeout(() => setCopiedToken(null), 1500);
-  }
-
-  const errorNotice = error ? (
-    <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-      {error}
-    </p>
-  ) : null;
+    return stageFilter === "all" ? rows : rows.filter((row) => campaignStage(row) === stageFilter);
+  }, [initialCampaigns, search, stageFilter]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Campaigns"
-        description="Build creative packs, share review links, collect client decisions."
+        description="Send a month of content to a client, collect approval, release files when paid."
         action={
-          <button type="button" onClick={() => openForm(null)} className={primaryBtnClass}>
+          <button type="button" onClick={() => setFormOpen(true)} className={primaryBtnClass}>
             New campaign
           </button>
         }
       />
 
       {fetchError ? (
-        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Could not load full campaign data: {fetchError}. Run{" "}
-          <code className="rounded bg-surface px-1">schema_updates.sql</code> in Supabase if
-          carousel slides are missing.
+        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          Could not load campaigns: {fetchError}
         </p>
       ) : null}
 
@@ -114,96 +116,36 @@ export function CampaignsManager({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search campaigns, client, month…"
-        status={statusFilter}
-        onStatusChange={setStatusFilter}
-        statusOptions={CAMPAIGN_STATUS_OPTIONS}
+        status={stageFilter}
+        onStatusChange={setStageFilter}
+        statusOptions={STAGES}
       />
 
-      <SummaryCards
-        items={[
-          { label: "Total", value: initialCampaigns.length, tone: "blue" },
-          {
-            label: "In review",
-            value: initialCampaigns.filter((c) => c.status === "review").length,
-            tone: "yellow",
-          },
-          {
-            label: "Approved",
-            value: initialCampaigns.filter((c) => c.status === "approved").length,
-            tone: "green",
-          },
-          {
-            label: "Assets",
-            value: initialCampaigns.reduce((n, c) => n + (c.campaign_assets?.length || 0), 0),
-            tone: "purple",
-          },
-        ]}
-      />
-
-      {filteredCampaigns.length === 0 ? (
+      {campaigns.length === 0 ? (
         <EmptyState
           message={
             initialCampaigns.length === 0
-              ? "No campaigns yet. Create your first creative pack."
+              ? "No campaigns yet. Create one, drop in the posts and send the review link."
               : "No campaigns match your filters."
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-          <CampaignsTable
-            rows={pagination.pageItems}
-            selectedId={selectedId}
-            copiedToken={copiedToken}
-            onManage={(row) => {
-              setSelectedId(row.id);
-              setError(null);
-            }}
-            onEdit={openForm}
-            onCopyLink={copyLink}
-            onToggleReview={(row) =>
-              write((supabase) =>
-                supabase
-                  .from("campaigns")
-                  .update({ review_disabled: !row.review_disabled })
-                  .eq("id", row.id),
-              )
-            }
-            onDelete={remove}
-            onStatusChange={(row, status) =>
-              write((supabase) => supabase.from("campaigns").update({ status }).eq("id", row.id))
-            }
-          />
-
-          {campaign ? (
-            <CampaignPanel
-              key={campaign.id}
-              campaign={campaign}
-              copied={copiedToken === campaign.review_token}
-              onCopyLink={copyLink}
-              onEdit={() => openForm(campaign)}
-              onClose={() => {
-                setSelectedId(null);
-                setError(null);
-              }}
-              onError={setError}
-            />
-          ) : null}
-          <PaginationControls pagination={pagination} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {campaigns.map((campaign) => (
+            <CampaignCard key={campaign.id} campaign={campaign} unseen={unseen[campaign.id] ?? 0} />
+          ))}
         </div>
       )}
 
-      {errorNotice}
-
-      {form ? (
+      {formOpen ? (
         <CampaignForm
-          editing={form.editing}
+          editing={null}
           clients={clients}
-          projects={projects}
-          onClose={() => setForm(null)}
+          onClose={() => setFormOpen(false)}
           onSaved={(createdId) => {
-            setForm(null);
-            if (createdId) setSelectedId(createdId);
-            router.refresh();
+            setFormOpen(false);
+            if (createdId) router.push(`/campaigns/${createdId}`);
+            else router.refresh();
           }}
         />
       ) : null}

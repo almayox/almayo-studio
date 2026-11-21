@@ -84,7 +84,4 @@ export const primaryBtnClass = "btn-primary";
 
 export const secondaryBtnClass = "btn-secondary";
 
-export const softLinkClass =
-  "text-sm font-medium text-fg/80 hover:text-fg hover:underline";
-
 export { ActionGroup } from "@/components/ui/ActionButton";

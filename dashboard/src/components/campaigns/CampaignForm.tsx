@@ -9,70 +9,111 @@ import {
   secondaryBtnClass,
 } from "@/components/ui/PageChrome";
 import { SearchSelect } from "@/components/ui/SearchSelect";
-import { newReviewToken, type CampaignRow } from "@/lib/campaigns";
+import { PlatformPicker } from "@/components/campaigns/PlatformPicker";
+import {
+  PLATFORM_OPTIONS,
+  newReviewToken,
+  parsePlatforms,
+  type CampaignRow,
+} from "@/lib/campaigns";
 import { hashPassword } from "@/lib/password";
 import { createClient } from "@/lib/supabase/client";
 import type { Client } from "@/lib/types";
+
+const MONTH_NAMES = Array.from({ length: 12 }, (_, index) =>
+  new Date(2000, index, 1).toLocaleDateString(undefined, { month: "long" }),
+);
+
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Month and year pickers that store "YYYY-MM". */
+function MonthPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  const year = match ? Number(match[1]) : new Date().getFullYear();
+  const month = match ? Number(match[2]) : new Date().getMonth() + 1;
+  const thisYear = new Date().getFullYear();
+  const years = Array.from(new Set([year, thisYear - 1, thisYear, thisYear + 1])).sort();
+  const set = (nextYear: number, nextMonth: number) =>
+    onChange(`${nextYear}-${String(nextMonth).padStart(2, "0")}`);
+
+  return (
+    <div className="grid grid-cols-[1fr_7rem] gap-2">
+      <select
+        aria-label="Month"
+        value={month}
+        onChange={(e) => set(year, Number(e.target.value))}
+        className={fieldClass}
+      >
+        {MONTH_NAMES.map((name, index) => (
+          <option key={name} value={index + 1}>
+            {name}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="Year"
+        value={year}
+        onChange={(e) => set(Number(e.target.value), month)}
+        className={fieldClass}
+      >
+        {years.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 /** The create / edit dialog. Mount it to open it; it starts from `editing`. */
 export function CampaignForm({
   editing,
   clients,
-  projects,
   onClose,
   onSaved,
 }: {
   /** The campaign being edited, or null for a new one. */
   editing: CampaignRow | null;
-  clients: Client[];
-  projects: { id: string; title: string }[];
+  clients: Pick<Client, "id" | "name">[];
   onClose: () => void;
   /** Called after a successful save, with the id of a newly created campaign. */
   onSaved: (createdId: string | null) => void;
 }) {
   const [title, setTitle] = useState(editing?.title || "");
   const [clientId, setClientId] = useState(editing?.client_id || "");
-  const [projectId, setProjectId] = useState(editing?.project_id || "");
-  const [month, setMonth] = useState(editing?.month || "");
-  const [objectives, setObjectives] = useState(editing?.objectives || "");
-  const [platforms, setPlatforms] = useState(editing ? editing.platforms || "" : "Instagram, TikTok");
-  const [notes, setNotes] = useState(editing?.notes || "");
+  const [month, setMonth] = useState(editing?.month || currentMonth());
+  const [platforms, setPlatforms] = useState(
+    editing ? parsePlatforms(editing.platforms) : ["Instagram"],
+  );
+  const [note, setNote] = useState(editing?.objectives || "");
   const [reviewPassword, setReviewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  /** Returns an error message, or the id of the created campaign (null when editing). */
   async function save(): Promise<{ error: string } | { createdId: string | null }> {
+    if (!clientId) return { error: "Choose the client this campaign is for." };
     const supabase = createClient();
     const password = reviewPassword.trim();
     const payload = {
-      title,
-      client_id: clientId || null,
-      project_id: projectId || null,
-      month: month || null,
-      objectives: objectives || null,
-      platforms: platforms || null,
-      notes: notes || null,
+      title: title.trim(),
+      client_id: clientId,
+      month,
+      platforms: platforms.join(", ") || null,
+      objectives: note.trim() || null,
     };
 
     if (editing) {
       const { error: updateError } = await supabase
         .from("campaigns")
-        .update(payload)
+        .update(
+          password ? { ...payload, review_password_hash: await hashPassword(password) } : payload,
+        )
         .eq("id", editing.id);
-      if (updateError) return { error: updateError.message };
-      if (password) {
-        const { error: passwordError } = await supabase
-          .from("campaigns")
-          .update({ review_password_hash: await hashPassword(password) })
-          .eq("id", editing.id);
-        if (passwordError) {
-          return {
-            error: `Details saved, but the review password was not: ${passwordError.message}`,
-          };
-        }
-      }
-      return { createdId: null };
+      return updateError ? { error: updateError.message } : { createdId: null };
     }
 
     const { data: created, error: insertError } = await supabase
@@ -106,19 +147,9 @@ export function CampaignForm({
       open
       onClose={onClose}
       title={editing ? "Edit campaign" : "New campaign"}
-      description="Campaign details and optional review password."
-      wide
+      description="A month of content for one client."
     >
-      <form onSubmit={onSubmit} className="space-y-3">
-        <label className={labelClass}>
-          Title
-          <input
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={fieldClass}
-          />
-        </label>
+      <form onSubmit={onSubmit} className="space-y-4">
         <label className={labelClass}>
           Client
           <SearchSelect
@@ -130,47 +161,30 @@ export function CampaignForm({
           />
         </label>
         <label className={labelClass}>
-          Project
-          <SearchSelect
-            value={projectId}
-            onChange={setProjectId}
-            placeholder="Search projects…"
-            emptyLabel="Select project"
-            options={projects.map((project) => ({ value: project.id, label: project.title }))}
+          Title
+          <input
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="December content"
+            className={fieldClass}
           />
         </label>
-        <label className={labelClass}>
+        <div className={labelClass}>
           Month
-          <input
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            placeholder="2026-07"
-            className={fieldClass}
-          />
-        </label>
-        <label className={labelClass}>
+          <MonthPicker value={month} onChange={setMonth} />
+        </div>
+        <div className={labelClass}>
           Platforms
-          <input
-            value={platforms}
-            onChange={(e) => setPlatforms(e.target.value)}
-            className={fieldClass}
-          />
-        </label>
+          <PlatformPicker options={PLATFORM_OPTIONS} value={platforms} onChange={setPlatforms} />
+        </div>
         <label className={labelClass}>
-          Objectives
-          <textarea
-            rows={3}
-            value={objectives}
-            onChange={(e) => setObjectives(e.target.value)}
-            className={fieldClass}
-          />
-        </label>
-        <label className={labelClass}>
-          Internal notes
+          Note for the client (optional)
           <textarea
             rows={2}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Shown at the top of the review page."
             className={fieldClass}
           />
         </label>
@@ -178,6 +192,7 @@ export function CampaignForm({
           Review password {editing ? "(leave blank to keep)" : "(optional)"}
           <input
             type="password"
+            autoComplete="new-password"
             value={reviewPassword}
             onChange={(e) => setReviewPassword(e.target.value)}
             className={fieldClass}
@@ -188,10 +203,6 @@ export function CampaignForm({
             {error}
           </p>
         ) : null}
-        <p className="text-xs text-fg/50">
-          After creating, click <strong>Manage</strong> on the row to add posts, carousels, or
-          reels. Set status to <strong>review</strong>, then copy the review link.
-        </p>
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={onClose} className={`flex-1 ${secondaryBtnClass}`}>
             Cancel

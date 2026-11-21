@@ -51,6 +51,16 @@ export type ProjectMedia = {
   media_type: string;
   mime_type: string | null;
   caption: string | null;
+  /** A video's own thumbnail image, shown before it plays. */
+  poster_url?: string | null;
+  /** A PDF's pages as images, in order. */
+  pages?: { url: string; width: number; height: number }[] | null;
+  /** A PDF written right to left (Arabic). */
+  rtl?: boolean | null;
+  /** Media sharing a key are one social media post (a carousel). */
+  group_key?: string | null;
+  /** Which part stays visible when the picture is cropped, e.g. "30% 50%". */
+  poster_position?: string | null;
   sort_order: number;
 };
 

@@ -61,3 +61,88 @@ body {
     text-decoration: none;
   }
 }
+
+/* 404 page: the cursor drifts as if someone is still working on the frame. */
+@keyframes not-found-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-14px, -10px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .not-found-cursor {
+    animation: not-found-drift 5s ease-in-out infinite;
+  }
+}
+
+/* Project book: page turning. */
+.book-leaf {
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.45, 0.05, 0.25, 1);
+  animation-fill-mode: both;
+}
+@keyframes book-turn-next {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-180deg); }
+}
+@keyframes book-turn-prev {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(180deg); }
+}
+@keyframes book-single-out {
+  from { transform: rotateY(0deg); opacity: 1; }
+  to { transform: rotateY(-80deg); opacity: 0; }
+}
+@keyframes book-single-in {
+  from { transform: rotateY(-80deg); opacity: 0; }
+  to { transform: rotateY(0deg); opacity: 1; }
+}
+@keyframes book-single-out-rtl {
+  from { transform: rotateY(0deg); opacity: 1; }
+  to { transform: rotateY(80deg); opacity: 0; }
+}
+@keyframes book-single-in-rtl {
+  from { transform: rotateY(80deg); opacity: 0; }
+  to { transform: rotateY(0deg); opacity: 1; }
+}
+/* A wide page hinged at the top lifts up and away, like a desk calendar. */
+@keyframes book-calendar-out {
+  from { transform: rotateX(0deg); opacity: 1; }
+  70% { opacity: 1; }
+  to { transform: rotateX(95deg); opacity: 0; }
+}
+@keyframes book-calendar-in {
+  from { transform: rotateX(95deg); opacity: 0; }
+  30% { opacity: 1; }
+  to { transform: rotateX(0deg); opacity: 1; }
+}
+/* --hx / --hy: the way a finger should move (-1, 0 or 1). */
+.book-swipe-hint {
+  animation: book-swipe-hint 1.6s ease-in-out infinite;
+}
+@keyframes book-swipe-hint {
+  0% { transform: translate(calc(var(--hx, 0) * -8px), calc(var(--hy, 0) * -8px)); opacity: 0; }
+  25% { opacity: 1; }
+  75% { transform: translate(calc(var(--hx, 0) * 8px), calc(var(--hy, 0) * 8px)); opacity: 1; }
+  100% { transform: translate(calc(var(--hx, 0) * 8px), calc(var(--hy, 0) * 8px)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-leaf { animation-duration: 1ms; }
+  .book-swipe-hint { animation: none; }
+}
+
+/* 3D model: the "drag to look around" hint sways side to side. */
+.model-drag-hint {
+  animation: model-drag-hint 1.6s ease-in-out infinite;
+}
+@keyframes model-drag-hint {
+  0%, 100% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .model-drag-hint { animation: none; }
+}

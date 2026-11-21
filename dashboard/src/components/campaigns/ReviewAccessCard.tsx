@@ -69,9 +69,14 @@ export function ReviewAccessCard({
   }
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
+    <div className="rounded-2xl border border-line bg-surface p-4">
       <p className="text-sm font-medium text-fg">Client review link</p>
-      <code className="mt-2 block overflow-x-auto rounded-lg bg-subtle px-3 py-2 text-xs text-fg/80">
+      {campaign.status === "draft" ? (
+        <p className="mt-1 text-xs text-fg/50">
+          The link opens for the client once you send the campaign for review.
+        </p>
+      ) : null}
+      <code className="mt-2 block overflow-x-auto whitespace-nowrap rounded-lg bg-subtle px-3 py-2 text-xs text-fg/80">
         {reviewUrl(campaign.review_token)}
       </code>
       <div className={`mt-3 ${controlRowClass}`}>

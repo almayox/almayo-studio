@@ -25,6 +25,9 @@ import { publicSiteUrl } from "@/lib/siteUrl";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
+/** Counts shown beside sidebar links, keyed by the link's href. */
+type NavBadges = Record<string, number>;
+
 /** Sidebar groups, in the order the studio's work flows. */
 const NAV_GROUPS: NavItem[][] = [
   [{ href: "/overview", label: "Overview", icon: LayoutDashboard }],
@@ -64,9 +67,11 @@ function Brand() {
 
 function SidebarNav({
   email,
+  badges,
   onNavigate,
 }: {
   email?: string;
+  badges: NavBadges;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -94,6 +99,14 @@ function SidebarNav({
                 >
                   <Icon size={16} strokeWidth={1.75} aria-hidden />
                   {label}
+                  {badges[href] ? (
+                    <span
+                      className="ml-auto rounded-full bg-fg px-1.5 text-[11px] font-semibold leading-5 text-canvas"
+                      aria-label={`${badges[href]} with new client activity`}
+                    >
+                      {badges[href]}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
@@ -123,9 +136,11 @@ function SidebarNav({
 export function DashboardShell({
   children,
   email,
+  badges = {},
 }: {
   children: React.ReactNode;
   email?: string;
+  badges?: NavBadges;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -142,7 +157,7 @@ export function DashboardShell({
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
       <aside className="glass sticky top-0 hidden h-screen w-60 shrink-0 border-r border-line lg:block">
-        <SidebarNav email={email} />
+        <SidebarNav email={email} badges={badges} />
       </aside>
 
       {/* Mobile drawer */}
@@ -163,7 +178,7 @@ export function DashboardShell({
             >
               <X size={18} aria-hidden />
             </button>
-            <SidebarNav email={email} onNavigate={() => setMobileOpen(false)} />
+            <SidebarNav email={email} badges={badges} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       ) : null}

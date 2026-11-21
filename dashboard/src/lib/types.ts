@@ -27,6 +27,8 @@ export type Project = {
   is_visible: boolean;
   /** Internal: whether this project needs a signed contract. */
   contract_required?: boolean;
+  /** How the public project page is laid out. */
+  display_style?: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -39,6 +41,16 @@ export type ProjectMedia = {
   media_type: string;
   mime_type: string | null;
   caption: string | null;
+  /** A video's own thumbnail image, shown before it plays. */
+  poster_url?: string | null;
+  /** A PDF's pages as images, in order. Its `url` is the first page. */
+  pages?: { url: string; width: number; height: number }[] | null;
+  /** A PDF written right to left (Arabic). */
+  rtl?: boolean | null;
+  /** Media sharing a key are one social media post (a carousel). */
+  group_key?: string | null;
+  /** Which part stays visible when the picture is cropped, e.g. "30% 50%". */
+  poster_position?: string | null;
   sort_order: number;
 };
 
@@ -299,6 +311,10 @@ export type Campaign = {
   client_approved_at: string | null;
   published_at?: string | null;
   review_token_expires_at?: string | null;
+  /** Invoice that pays for this campaign; final files unlock when it is paid. */
+  invoice_id?: string | null;
+  files_released_at?: string | null;
+  review_sent_at?: string | null;
 };
 
 export type CampaignAsset = {
@@ -312,6 +328,10 @@ export type CampaignAsset = {
   notes: string | null;
   media_url: string | null;
   thumbnail_url: string | null;
+  /** Smaller copy the client sees until files are released. */
+  preview_url?: string | null;
+  /** Platforms this post goes to, comma separated; empty means not stated. */
+  platforms?: string | null;
   sort_order: number;
   approval_status: string;
 };
@@ -320,6 +340,7 @@ export type CampaignAssetSlide = {
   id: string;
   asset_id: string;
   media_url: string;
+  preview_url?: string | null;
   caption: string | null;
   sort_order: number;
 };
@@ -329,6 +350,21 @@ export type CampaignComment = {
   asset_id: string;
   author_name: string;
   body: string | null;
+  /** Voice note recorded by the client. */
+  audio_url?: string | null;
+  /** True for a reply written in the dashboard. */
+  from_studio?: boolean;
+  created_at: string;
+};
+
+export type CampaignEvent = {
+  id: string;
+  campaign_id: string;
+  asset_id: string | null;
+  kind: string;
+  actor_name: string | null;
+  detail: string | null;
+  ip: string | null;
   created_at: string;
 };
 

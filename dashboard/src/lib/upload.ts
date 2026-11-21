@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
 import * as tus from "tus-js-client";
-import { validateUploadBasics } from "@/lib/fileScan";
+import { GLB_MIME, validateUploadBasics } from "@/lib/fileScan";
 import { toStoredStorageUrl } from "@/lib/storage";
+import { compressVideo, needsVideoCompression } from "@/lib/videoCompress";
 
 // Large enough for a full-width image on a high-density screen.
 const IMAGE_MAX_EDGE = 2400;
@@ -154,6 +155,11 @@ async function uploadResumable(
   return toStoredStorageUrl(bucket, path);
 }
 
+/** A 3D model file, recognised by its name because browsers rarely label it. */
+export function isGlbFile(file: File) {
+  return /\.glb$/i.test(file.name);
+}
+
 export type UploadPhase = "compressing" | "uploading" | "scanning";
 
 export type UploadOptions = {
@@ -170,7 +176,11 @@ export function uploadStatusLabel(
   phase: UploadPhase | null | undefined,
   progress?: number | null,
 ) {
-  if (phase === "compressing") return "Compressing…";
+  if (phase === "compressing") {
+    return typeof progress === "number" && progress > 0 && progress < 100
+      ? `Compressing ${progress}%…`
+      : "Compressing…";
+  }
   if (phase === "scanning") return "Scanning…";
   if (typeof progress === "number" && progress > 0 && progress < 100) {
     return `Uploading ${progress}%…`;
@@ -196,6 +206,21 @@ export async function uploadStudioFile(
       // Formats the browser cannot decode (e.g. HEIC) are uploaded untouched.
       prepared = file;
     }
+  }
+
+  // Videos over the storage limit are shrunk in the browser first, the same
+  // way for every upload in the dashboard.
+  if (needsVideoCompression(file)) {
+    options.onPhase?.("compressing");
+    options.onProgress?.(0);
+    prepared = await compressVideo(file, (fraction) =>
+      options.onProgress?.(Math.round(fraction * 100)),
+    );
+  }
+
+  // Browsers often give a .glb file no type at all; storage needs the real one.
+  if (isGlbFile(prepared) && prepared.type !== GLB_MIME) {
+    prepared = new File([prepared], prepared.name, { type: GLB_MIME });
   }
 
   const basics = validateUploadBasics(prepared, API_MAX_BYTES);

@@ -11,7 +11,8 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https://*.supabase.co",
   "font-src 'self' data:",
-  `connect-src 'self' https://*.supabase.co wss://*.supabase.co${isDev ? " ws:" : ""}`,
+  // blob: lets the 3D viewer read the textures packed inside a model file.
+  `connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co${isDev ? " ws:" : ""}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

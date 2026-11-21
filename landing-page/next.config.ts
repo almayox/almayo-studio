@@ -11,8 +11,11 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https://*.supabase.co",
   "font-src 'self' data:",
-  `connect-src 'self' https://*.supabase.co wss://*.supabase.co${isDev ? " ws:" : ""}`,
+  // blob: lets the 3D viewer read the textures packed inside a model file.
+  `connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co${isDev ? " ws:" : ""}`,
   "worker-src 'self' blob:",
+  // YouTube's player, for project videos added as a YouTube link.
+  "frame-src https://www.youtube-nocookie.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -26,7 +29,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    value: "camera=(), microphone=(self), geolocation=()",
   },
 ];
 

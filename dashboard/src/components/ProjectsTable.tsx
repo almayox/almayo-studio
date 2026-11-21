@@ -4,6 +4,7 @@ import { PaginationBar, usePagination } from "@/components/ui/Pagination";
 import { ActionGroup } from "@/components/ui/PageChrome";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Pencil } from "lucide-react";
+import { DuplicateProjectButton } from "@/components/DuplicateProjectButton";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import type { Project } from "@/lib/types";
 
@@ -87,6 +88,7 @@ export function ProjectsTable({
                     label="Edit"
                     href={`/projects/${project.id}`}
                   />
+                  <DuplicateProjectButton project={project} />
                   <DeleteProjectButton id={project.id} title={project.title} />
                 </ActionGroup>
               </td>
