@@ -39,7 +39,7 @@ const APPROVALS = [
 ];
 
 function Media({ src, video }: { src: string; video: boolean }) {
-  const className = "aspect-[4/5] w-full rounded-xl bg-subtle object-contain";
+  const className = "aspect-[3/4] w-full rounded-xl bg-subtle object-contain";
   return video ? (
     <StorageVideo src={src} controls playsInline preload="metadata" className={className} />
   ) : (
@@ -242,7 +242,7 @@ export function PostEditor({
               video={shown ? isVideoUrl(shownUrl) : kind === "reel"}
             />
           ) : (
-            <div className="flex aspect-[4/5] items-center justify-center rounded-xl bg-subtle text-xs text-fg/50">
+            <div className="flex aspect-[3/4] items-center justify-center rounded-xl bg-subtle text-xs text-fg/50">
               No media
             </div>
           )}

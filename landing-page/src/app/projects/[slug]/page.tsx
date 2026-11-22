@@ -9,6 +9,7 @@ import { parseYouTubeLink } from "@/lib/youtube";
 import { ModelViewer } from "@/components/ModelViewer";
 import { ProjectBookTile } from "@/components/ProjectBookTile";
 import { ProjectVideo } from "@/components/ProjectVideo";
+import { ProjectImage } from "@/components/ProjectImage";
 import { RemoteImage } from "@/components/RemoteImage";
 import { Reveal } from "@/components/Reveal";
 import { getProjectBySlug } from "@/lib/data";
@@ -197,18 +198,8 @@ export default async function ProjectDetailPage({ params }: Props) {
                 );
               }
               return (
-                <Reveal
-                  key={item.id}
-                  delay={i * 0.04}
-                  className="relative aspect-[4/3] w-[min(100%,calc(var(--media-row)*4/3))] overflow-hidden rounded-2xl bg-navy/5"
-                >
-                  <RemoteImage
-                    src={item.url}
-                    alt={item.caption || project.title}
-                    fill
-                    sizes="(min-width: 1152px) 640px, 100vw"
-                    className="h-full w-full object-cover"
-                  />
+                <Reveal key={item.id} delay={i * 0.04} className="contents">
+                  <ProjectImage src={item.url} alt={item.caption || project.title} />
                 </Reveal>
               );
             })}

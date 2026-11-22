@@ -17,8 +17,11 @@ export type ShowItem = {
   position: string | null;
 };
 
+/** How a post is marked in the grid. */
+export type PostType = "post" | "carousel" | "reel";
+
 /** A social media post: one item, or several swiped through as a carousel. */
-export type ShowPost = { id: string; items: ShowItem[] };
+export type ShowPost = { id: string; type: PostType; items: ShowItem[] };
 
 /** Images and videos, in gallery order. */
 export function toShowItems(media: ProjectMedia[]): ShowItem[] {
@@ -42,13 +45,37 @@ export function toShowItems(media: ProjectMedia[]): ShowItem[] {
   });
 }
 
+/** A post's kind worked out from its files. */
+function autoType(items: ShowItem[]): PostType {
+  if (items.length > 1) return "carousel";
+  return items[0].kind === "image" ? "post" : "reel";
+}
+
+/**
+ * Applies the kind chosen in the dashboard. A reel plays only its video, with
+ * the post's image (if any) as the picture shown in the grid; a single post
+ * shows only its first file.
+ */
+function withType(post: { id: string; items: ShowItem[] }, chosen: PostType | null): ShowPost {
+  if (chosen === "reel") {
+    const video = post.items.find((item) => item.kind !== "image");
+    if (!video) return { ...post, type: autoType(post.items) };
+    const still = post.items.find((item) => item.kind === "image");
+    const poster = video.poster ?? still?.url ?? null;
+    const position = video.poster ? video.position : (still?.position ?? video.position);
+    return { id: post.id, type: "reel", items: [{ ...video, poster, position }] };
+  }
+  if (chosen === "post") return { id: post.id, type: "post", items: [post.items[0]] };
+  return { ...post, type: chosen ?? autoType(post.items) };
+}
+
 /** Groups media into posts: items sharing a group key are one carousel, in gallery order. */
 export function toShowPosts(media: ProjectMedia[]): ShowPost[] {
-  const keys = new Map(media.map((item) => [item.id, item.group_key || null]));
-  const posts: ShowPost[] = [];
-  const byKey = new Map<string, ShowPost>();
+  const byId = new Map(media.map((item) => [item.id, item]));
+  const posts: { id: string; items: ShowItem[] }[] = [];
+  const byKey = new Map<string, { id: string; items: ShowItem[] }>();
   for (const item of toShowItems(media)) {
-    const key = keys.get(item.id);
+    const key = byId.get(item.id)?.group_key || null;
     const existing = key ? byKey.get(key) : undefined;
     if (existing) {
       existing.items.push(item);
@@ -58,5 +85,6 @@ export function toShowPosts(media: ProjectMedia[]): ShowPost[] {
     posts.push(post);
     if (key) byKey.set(key, post);
   }
-  return posts;
+  // The choice is saved on the post's first item.
+  return posts.map((post) => withType(post, byId.get(post.id)?.post_type ?? null));
 }

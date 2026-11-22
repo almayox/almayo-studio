@@ -37,7 +37,7 @@ function FilePreview({
     <div className={fits ? "" : "opacity-40"}>
       <div className="relative overflow-hidden rounded-lg bg-subtle">
         {!fits ? (
-          <div className="flex aspect-[4/5] items-center justify-center px-1 text-center text-[10px] text-fg/60">
+          <div className="flex aspect-[3/4] items-center justify-center px-1 text-center text-[10px] text-fg/60">
             Not an image or video
           </div>
         ) : video ? (
@@ -46,11 +46,11 @@ function FilePreview({
             muted
             playsInline
             preload="metadata"
-            className="aspect-[4/5] w-full object-cover"
+            className="aspect-[3/4] w-full object-cover"
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={file.name} className="aspect-[4/5] w-full object-cover" />
+          <img src={url} alt={file.name} className="aspect-[3/4] w-full object-cover" />
         )}
         {label ? (
           <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 text-[10px] font-semibold leading-4 text-white">

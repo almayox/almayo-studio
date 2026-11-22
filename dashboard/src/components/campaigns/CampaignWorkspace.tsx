@@ -544,7 +544,7 @@ export function CampaignWorkspace({
                     }
                   }}
                   aria-label="Add post"
-                  className={`flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-2 text-center text-xs transition ${
+                  className={`flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-2 text-center text-xs transition ${
                     active
                       ? "border-fg bg-fg/10 text-fg"
                       : "border-line text-fg/50 hover:border-fg/30 hover:text-fg"

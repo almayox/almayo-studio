@@ -363,10 +363,10 @@ export function CampaignReviewClient({
                       media={post.media[0]}
                       alt={post.title}
                       released={campaign.released}
-                      className="aspect-[4/5] w-full"
+                      className="aspect-[3/4] w-full"
                     />
                   ) : (
-                    <div className="aspect-[4/5] w-full bg-mist/40" />
+                    <div className="aspect-[3/4] w-full bg-mist/40" />
                   )}
                   <StatusBadge status={post.approval_status} />
                   <span className="absolute right-1.5 top-1.5 text-white drop-shadow">
@@ -386,7 +386,7 @@ export function CampaignReviewClient({
             })}
             {Array.from({ length: emptyCells }, (_, index) => (
               <div key={`empty-${index}`} aria-hidden className="bg-white p-1">
-                <div className="aspect-[4/5] w-full rounded-md border-2 border-dashed border-mist" />
+                <div className="aspect-[3/4] w-full rounded-md border-2 border-dashed border-mist" />
               </div>
             ))}
           </div>

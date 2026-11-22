@@ -44,6 +44,7 @@ type PendingMedia = {
   rtl?: boolean | null;
   group_key?: string | null;
   poster_position?: string | null;
+  post_type?: ProjectMedia["post_type"];
 };
 
 /** A file or link ready to become a project_media row. */
@@ -63,6 +64,7 @@ function extraColumns(item: {
   rtl?: boolean | null;
   group_key?: string | null;
   poster_position?: string | null;
+  post_type?: string | null;
 }) {
   return {
     ...(item.poster_position ? { poster_position: item.poster_position } : {}),
@@ -70,6 +72,7 @@ function extraColumns(item: {
     ...(item.pages ? { pages: item.pages } : {}),
     ...(item.rtl ? { rtl: true } : {}),
     ...(item.group_key ? { group_key: item.group_key } : {}),
+    ...(item.post_type ? { post_type: item.post_type } : {}),
   };
 }
 
@@ -237,7 +240,7 @@ export function ProjectForm({
 
   function showMediaError(err: unknown, fallback: string) {
     const message = (err as { message?: string } | null)?.message || fallback;
-    setError(/pages|rtl|group_key|poster_url|poster_position/.test(message) ? SETUP_NEEDED : message);
+    setError(/pages|rtl|group_key|poster_url|poster_position|post_type/.test(message) ? SETUP_NEEDED : message);
   }
 
   async function onGalleryFiles(files: FileList) {
@@ -314,6 +317,13 @@ export function ProjectForm({
     void patchMedia(
       [previous, item].map((entry) => ({ id: entry.id, values: { group_key: key } })),
     );
+  }
+
+  /** Steps a post's kind: automatic, then post, carousel, reel, and back to automatic. */
+  function cyclePostType(item: ProjectMedia) {
+    const order = [null, "post", "carousel", "reel"] as const;
+    const next = order[(order.indexOf(item.post_type ?? null) + 1) % order.length];
+    void patchMedia([{ id: item.id, values: { post_type: next } }]);
   }
 
   /** Saves a video's own thumbnail image. */
@@ -429,7 +439,7 @@ export function ProjectForm({
       router.refresh();
     } catch (err) {
       const message = (err as { message?: string } | null)?.message || "Save failed";
-      setError(/display_style|pages|rtl|group_key|poster_url/.test(message) ? SETUP_NEEDED : message);
+      setError(/display_style|pages|rtl|group_key|poster_url|post_type/.test(message) ? SETUP_NEEDED : message);
       setLoading(false);
     }
   }
@@ -448,6 +458,7 @@ export function ProjectForm({
         rtl: item.rtl ?? false,
         group_key: item.group_key ?? null,
         poster_position: item.poster_position ?? null,
+        post_type: item.post_type ?? null,
         sort_order: 0,
       }));
 
@@ -696,6 +707,7 @@ export function ProjectForm({
                   rtl: item.rtl,
                   group_key: item.group_key,
                   poster_position: item.poster_position,
+                  post_type: item.post_type,
                 })),
               );
             }
@@ -705,11 +717,13 @@ export function ProjectForm({
           }}
           onEditPoster={setPosterFor}
           onCrop={(item) => {
-            const image = item.media_type === "image" ? item.url : item.poster_url;
+            const image =
+              item.media_type === "image" || item.media_type === "pdf" ? item.url : item.poster_url;
             if (image) setCropFor({ id: item.id, image, position: item.poster_position });
           }}
           grouping={displayStyle === "social"}
           onToggleJoin={toggleJoin}
+          onCyclePostType={cyclePostType}
           onToggleRtl={(item) => void patchMedia([{ id: item.id, values: { rtl: !item.rtl } }])}
         />
 

@@ -162,7 +162,7 @@ function PostDialog({
   const many = post.items.length > 1;
   // A lone vertical video gets a tall frame; everything else the usual post shape.
   const tall = !many && (post.items[0].kind === "video" || post.items[0].short);
-  const ratio = tall ? 9 / 16 : 4 / 5;
+  const ratio = tall ? 9 / 16 : 3 / 4;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -310,8 +310,8 @@ export function SocialGrid({ profile, posts }: { profile: Profile; posts: ShowPo
   // Dashed places complete the last row, so the grid of three always reads as one.
   const empty = (3 - (posts.length % 3)) % 3;
 
-  const carousels = posts.filter((post) => post.items.length > 1).length;
-  const videos = posts.filter((post) => post.items.length === 1 && post.items[0].kind !== "image").length;
+  const carousels = posts.filter((post) => post.type === "carousel").length;
+  const videos = posts.filter((post) => post.type === "reel").length;
   const stats = [
     { label: posts.length === 1 ? "Post" : "Posts", value: posts.length },
     { label: carousels === 1 ? "Carousel" : "Carousels", value: carousels },
@@ -362,14 +362,14 @@ export function SocialGrid({ profile, posts }: { profile: Profile; posts: ShowPo
       <div className="grid grid-cols-3 gap-0.5 bg-mist">
         {posts.map((post, index) => {
           const cover = post.items[0];
-          const kind = post.items.length > 1 ? "carousel" : cover.kind === "image" ? null : "video";
+          const kind = post.type === "carousel" ? "carousel" : post.type === "reel" ? "video" : null;
           return (
             <button
               key={post.id}
               type="button"
               onClick={() => setOpen(index)}
               aria-label={`Open post ${index + 1}`}
-              className="group relative aspect-[4/5] overflow-hidden bg-foam focus-visible:outline focus-visible:outline-2 focus-visible:outline-navy"
+              className="group relative aspect-[3/4] overflow-hidden bg-foam focus-visible:outline focus-visible:outline-2 focus-visible:outline-navy"
             >
               <Still
                 item={cover}
@@ -386,7 +386,7 @@ export function SocialGrid({ profile, posts }: { profile: Profile; posts: ShowPo
         })}
         {Array.from({ length: empty }, (_, index) => (
           <div key={index} aria-hidden className="bg-white p-1">
-            <div className="aspect-[4/5] w-full rounded-md border-2 border-dashed border-mist" />
+            <div className="aspect-[3/4] w-full rounded-md border-2 border-dashed border-mist" />
           </div>
         ))}
       </div>

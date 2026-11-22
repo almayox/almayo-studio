@@ -51,6 +51,8 @@ export type ProjectMedia = {
   group_key?: string | null;
   /** Which part stays visible when the picture is cropped, e.g. "30% 50%". */
   poster_position?: string | null;
+  /** The post's kind in the social grid, on its first item; empty means automatic. */
+  post_type?: "post" | "carousel" | "reel" | null;
   sort_order: number;
 };
 

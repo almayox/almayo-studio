@@ -240,7 +240,7 @@ export function ReviewPostDialog({
                         released={released}
                         controls
                         contain
-                        className="aspect-[4/5] w-full max-md:max-h-[64dvh]"
+                        className="aspect-[3/4] w-full max-md:max-h-[64dvh]"
                       />
                     </div>
                   ))}
@@ -273,7 +273,7 @@ export function ReviewPostDialog({
                 ) : null}
               </div>
             ) : (
-              <div className="flex aspect-[4/5] items-center justify-center bg-mist/40 text-sm text-navy/50">
+              <div className="flex aspect-[3/4] items-center justify-center bg-mist/40 text-sm text-navy/50">
                 No media
               </div>
             )}

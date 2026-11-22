@@ -75,6 +75,7 @@ export function DuplicateProjectButton({ project }: { project: Project }) {
             ...(item.rtl ? { rtl: true } : {}),
             ...(item.poster_position ? { poster_position: item.poster_position } : {}),
             ...(item.group_key ? { group_key: item.group_key } : {}),
+            ...(item.post_type ? { post_type: item.post_type } : {}),
           })),
         );
         if (mediaError) throw mediaError;

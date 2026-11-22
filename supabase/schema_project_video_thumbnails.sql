@@ -11,7 +11,10 @@ alter table public.project_media
   -- Media with the same key are one social media post (a carousel).
   add column if not exists group_key text,
   -- Which part of the picture stays visible when it is cropped, e.g. '30% 50%'.
-  add column if not exists poster_position text;
+  add column if not exists poster_position text,
+  -- The post's kind in the social media grid, set on its first item:
+  -- 'post', 'carousel' or 'reel'. Empty means it is worked out from the files.
+  add column if not exists post_type text;
 
 -- How the project page is laid out: 'gallery', 'social' or 'video'.
 alter table public.projects

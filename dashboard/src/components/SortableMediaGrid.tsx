@@ -31,6 +31,8 @@ function SortableMediaItem({
   onToggleJoin,
   onToggleRtl,
   onCrop,
+  postType,
+  onCyclePostType,
 }: {
   item: ProjectMedia;
   onDelete: () => void;
@@ -44,6 +46,9 @@ function SortableMediaItem({
   onToggleRtl: () => void;
   /** Opens the crop chooser; shown when the item has a picture to crop. */
   onCrop: () => void;
+  /** The post's kind as a label, on the first item of each post; null hides the control. */
+  postType: string | null;
+  onCyclePostType: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -147,6 +152,7 @@ function SortableMediaItem({
             alt=""
             draggable={false}
             className="pointer-events-none h-full w-full rounded-lg object-cover"
+            style={{ objectPosition: item.poster_position || undefined }}
           />
           {item.media_type === "pdf" ? (
             <>
@@ -170,7 +176,7 @@ function SortableMediaItem({
         </>
       )}
 
-      {item.media_type === "image" || (item.media_type !== "pdf" && item.poster_url) ? (
+      {item.media_type === "image" || item.media_type === "pdf" || item.poster_url ? (
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
@@ -191,6 +197,22 @@ function SortableMediaItem({
         <span className="pointer-events-none absolute right-1.5 top-1.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-semibold text-black">
           Carousel {carousel}
         </span>
+      ) : null}
+      {postType ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCyclePostType();
+          }}
+          title="How this post is marked in the grid. Press to change: Auto, Post, Carousel, Reel."
+          className={`absolute left-1.5 top-8 z-10 cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+            item.post_type ? "bg-amber-400 text-black hover:bg-amber-300" : "bg-black/65 text-white hover:bg-black/85"
+          }`}
+        >
+          Type: {postType}
+        </button>
       ) : null}
       {joined === null ? null : (
         <button
@@ -222,6 +244,8 @@ function SortableMediaItem({
   );
 }
 
+const POST_TYPE_LABEL = { auto: "Auto", post: "Post", carousel: "Carousel", reel: "Reel" } as const;
+
 /** "2/3" for the second of three items sharing a post, or null when it stands alone. */
 function carouselLabel(items: ProjectMedia[], item: ProjectMedia) {
   if (!item.group_key) return null;
@@ -238,6 +262,7 @@ export function SortableMediaGrid({
   onToggleJoin,
   onToggleRtl,
   onCrop,
+  onCyclePostType,
 }: {
   items: ProjectMedia[];
   onReorder: (items: ProjectMedia[]) => void;
@@ -248,6 +273,7 @@ export function SortableMediaGrid({
   onToggleJoin: (item: ProjectMedia) => void;
   onToggleRtl: (item: ProjectMedia) => void;
   onCrop: (item: ProjectMedia) => void;
+  onCyclePostType: (item: ProjectMedia) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -286,6 +312,15 @@ export function SortableMediaGrid({
               onToggleJoin={() => onToggleJoin(item)}
               onToggleRtl={() => onToggleRtl(item)}
               onCrop={() => onCrop(item)}
+              postType={
+                grouping &&
+                item.media_type !== "pdf" &&
+                item.media_type !== "model" &&
+                !(index > 0 && item.group_key && item.group_key === items[index - 1].group_key)
+                  ? POST_TYPE_LABEL[item.post_type ?? "auto"]
+                  : null
+              }
+              onCyclePostType={() => onCyclePostType(item)}
             />
           ))}
         </div>

@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { primaryBtnClass, secondaryBtnClass } from "@/components/ui/PageChrome";
 
 /** The shape of a post in the social media grid and, nearly, of a project card. */
-const CROP_RATIO = 4 / 5;
+const CROP_RATIO = 3 / 4;
 
 function parsePosition(value: string | null | undefined) {
   const match = /^(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/.exec(value || "");
