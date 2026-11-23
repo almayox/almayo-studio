@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProjectCard } from "@/components/ProjectCard";
+import { ProjectRow } from "@/components/ProjectRow";
 import { Reveal } from "@/components/Reveal";
 import { getCatalogs, getProjects } from "@/lib/data";
 
@@ -19,6 +20,20 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const filtered = activeCatalog
     ? projects.filter((p) => p.catalog_id === activeCatalog.id)
     : projects;
+
+  // The full list is shown one category per row; work with no category comes last.
+  const rows = [
+    ...catalogs.map((catalog) => ({
+      title: catalog.name,
+      href: `/projects?catalog=${catalog.slug}`,
+      projects: projects.filter((p) => p.catalog_id === catalog.id),
+    })),
+    {
+      title: "More work",
+      href: undefined as string | undefined,
+      projects: projects.filter((p) => !catalogs.some((c) => c.id === p.catalog_id)),
+    },
+  ].filter((row) => row.projects.length);
 
   return (
     <>
@@ -64,7 +79,16 @@ export default async function ProjectsPage({ searchParams }: Props) {
           </div>
         ) : null}
 
-        {filtered.length ? (
+        {!activeCatalog && rows.length ? (
+          // Every category as its own sliding row.
+          rows.map((row) => (
+            <ProjectRow key={row.title} title={row.title} href={row.href}>
+              {row.projects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </ProjectRow>
+          ))
+        ) : filtered.length ? (
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((project, i) => (
               <Reveal key={project.id} delay={i * 0.05}>

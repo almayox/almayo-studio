@@ -3,6 +3,44 @@
 import { useEffect, useRef, useState } from "react";
 
 type Status = "loading" | "ready" | "error";
+type Json = Record<string, unknown>;
+
+function isObject(value: unknown): value is Json {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Removes every link from a material to a texture that has no picture in it. */
+function dropEmptyTextures(gltf: Json) {
+  const textures = Array.isArray(gltf.textures) ? gltf.textures : [];
+  const empty = new Set<number>();
+  textures.forEach((texture, index) => {
+    if (!isObject(texture)) return;
+    const extensions = isObject(texture.extensions) ? Object.values(texture.extensions) : [];
+    const hasPicture =
+      typeof texture.source === "number" ||
+      extensions.some((extension) => isObject(extension) && typeof extension.source === "number");
+    if (!hasPicture) empty.add(index);
+  });
+  if (!empty.size) return;
+
+  const walk = (value: unknown) => {
+    if (Array.isArray(value)) return value.forEach(walk);
+    if (!isObject(value)) return;
+    for (const [key, child] of Object.entries(value)) {
+      if (
+        /texture$/i.test(key) &&
+        isObject(child) &&
+        typeof child.index === "number" &&
+        empty.has(child.index)
+      ) {
+        delete value[key];
+      } else {
+        walk(child);
+      }
+    }
+  };
+  walk(gltf.materials);
+}
 
 /**
  * Draws a 3D model (a .glb file) that the visitor can turn around by dragging
@@ -86,7 +124,19 @@ function ModelCanvas({ src, zoom, onUsed }: { src: string; zoom: boolean; onUsed
         renderer.domElement.remove();
       };
 
-      new GLTFLoader().load(
+      const loader = new GLTFLoader();
+      // Blender writes a texture with no picture when an image was missing at
+      // export. Skip those, so the surface shows its plain colour instead of
+      // the whole model failing to open.
+      loader.register((parser) => ({
+        name: "SKIP_EMPTY_TEXTURES",
+        beforeRoot() {
+          dropEmptyTextures(parser.json as Record<string, unknown>);
+          return null;
+        },
+      }));
+
+      loader.load(
         src,
         (gltf) => {
           if (stopped) return;
@@ -111,7 +161,8 @@ function ModelCanvas({ src, zoom, onUsed }: { src: string; zoom: boolean; onUsed
           draw();
         },
         undefined,
-        () => {
+        (error) => {
+          console.error("3D model failed to load", error);
           if (!stopped) setStatus("error");
         },
       );
@@ -137,7 +188,16 @@ function ModelCanvas({ src, zoom, onUsed }: { src: string; zoom: boolean; onUsed
 }
 
 /** A 3D model in the project gallery, with a full-screen view to look closer. */
-export function ModelViewer({ src, title }: { src: string; title: string }) {
+export function ModelViewer({
+  src,
+  title,
+  wide = false,
+}: {
+  src: string;
+  title: string;
+  /** Takes the whole row. Otherwise two models fit side by side on a wide screen. */
+  wide?: boolean;
+}) {
   const [used, setUsed] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -160,7 +220,9 @@ export function ModelViewer({ src, title }: { src: string; title: string }) {
       <div
         role="img"
         aria-label={`3D model: ${title}. Drag to turn it around.`}
-        className="relative aspect-[4/3] w-[min(100%,calc(var(--media-row)*4/3))] overflow-hidden rounded-2xl bg-gradient-to-b from-white to-mist/60 ring-1 ring-mist"
+        className={`relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-gradient-to-b from-white to-mist/60 ring-1 ring-mist ${
+          wide ? "sm:aspect-[2/1]" : "lg:w-[calc(50%-0.5rem)]"
+        }`}
       >
         {/* Only one copy is drawn at a time: the full-screen view takes over while it is open. */}
         {open ? null : <ModelCanvas src={src} zoom={false} onUsed={() => setUsed(true)} />}

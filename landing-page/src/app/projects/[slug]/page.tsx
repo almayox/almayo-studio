@@ -54,6 +54,8 @@ export default async function ProjectDetailPage({ params }: Props) {
         ? !isVideo(item.media_type)
         : true,
   );
+  // A single 3D model leads the page at full width; several sit two to a row.
+  const modelCount = gallery.filter((item) => item.media_type === "model").length;
   const clientName = project.clients?.name || "Almayo Studio";
 
   // The cover is taken from the gallery, so it is only shown on top when it is
@@ -157,8 +159,9 @@ export default async function ProjectDetailPage({ params }: Props) {
         ) : null}
 
         {gallery.length ? (
-          // One row height for everything; each item is as wide as its shape needs.
-          <div className="mt-8 flex flex-wrap items-start justify-center gap-4 [--media-row:25rem] sm:justify-start xl:[--media-row:28rem]">
+          // Videos, books and models share one row height and are as wide as their
+          // shape needs. Images use a lower row and stretch to fill it, as a grid.
+          <div className="mt-8 flex flex-wrap items-start justify-center gap-4 [--image-row:15rem] [--media-row:25rem] sm:justify-start sm:[--image-row:18rem] xl:[--media-row:28rem]">
             {gallery.map((item, i) => {
               const youTube = item.media_type === "youtube" ? parseYouTubeLink(item.url) : null;
               if (item.media_type === "pdf" && item.pages?.length) {
@@ -173,7 +176,14 @@ export default async function ProjectDetailPage({ params }: Props) {
                 );
               }
               if (item.media_type === "model") {
-                return <ModelViewer key={item.id} src={item.url} title={item.caption || project.title} />;
+                return (
+                  <ModelViewer
+                    key={item.id}
+                    src={item.url}
+                    title={item.caption || project.title}
+                    wide={modelCount === 1}
+                  />
+                );
               }
               if (item.media_type === "youtube") {
                 if (!youTube) return null;

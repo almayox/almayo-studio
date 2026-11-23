@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { RemoteImage } from "@/components/RemoteImage";
+import { CoverImage } from "@/components/CoverImage";
 import { richTextToPlain } from "@/lib/sanitize";
 import type { ProjectWithCatalog } from "@/lib/types";
 
@@ -18,10 +18,10 @@ export function ProjectCard({
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-navy/5">
         {project.thumbnail_url ? (
-          <RemoteImage
+          <CoverImage
             src={project.thumbnail_url}
             alt={project.title}
-            fill
+            tileRatio={3 / 4}
             sizes="(min-width: 1024px) 380px, (min-width: 640px) 50vw, 100vw"
             priority={priority}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"

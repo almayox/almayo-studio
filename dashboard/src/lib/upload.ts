@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import * as tus from "tus-js-client";
 import { GLB_MIME, validateUploadBasics } from "@/lib/fileScan";
+import { repairGlb } from "@/lib/glb";
 import { toStoredStorageUrl } from "@/lib/storage";
 import { compressVideo, needsVideoCompression } from "@/lib/videoCompress";
 
@@ -219,8 +220,12 @@ export async function uploadStudioFile(
   }
 
   // Browsers often give a .glb file no type at all; storage needs the real one.
-  if (isGlbFile(prepared) && prepared.type !== GLB_MIME) {
-    prepared = new File([prepared], prepared.name, { type: GLB_MIME });
+  if (isGlbFile(prepared)) {
+    // A model exported with a missing image would not open in any viewer.
+    const repaired = repairGlb(await prepared.arrayBuffer());
+    if (repaired || prepared.type !== GLB_MIME) {
+      prepared = new File([repaired ?? prepared], prepared.name, { type: GLB_MIME });
+    }
   }
 
   const basics = validateUploadBasics(prepared, API_MAX_BYTES);

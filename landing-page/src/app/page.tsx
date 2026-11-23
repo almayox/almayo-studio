@@ -207,10 +207,10 @@ export default async function HomePage() {
                 Brands I’ve Worked With
               </h2>
             </Reveal>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               {visibleClients.map((client, i) => (
                 <Reveal key={client.id} delay={i * 0.04}>
-                  <ClientCard client={client} />
+                  <ClientCard client={client} compact />
                 </Reveal>
               ))}
             </div>

@@ -16,12 +16,15 @@ export default async function ProjectsPage() {
 
   const projects = (data as Project[]) ?? [];
 
-  const [{ data: clientRows }, { data: contractRows }] = await Promise.all([
+  const [{ data: clientRows }, { data: catalogRows }, { data: contractRows }] = await Promise.all([
     supabase.from("clients").select("id, name"),
+    supabase.from("catalogs").select("id, name"),
     supabase.from("contracts").select("project_id, status, created_at").order("created_at"),
   ]);
   const clientNames: Record<string, string> = {};
   for (const row of clientRows ?? []) clientNames[row.id] = row.name;
+  const catalogNames: Record<string, string> = {};
+  for (const row of catalogRows ?? []) catalogNames[row.id] = row.name;
   // Latest contract per project; a signed one always wins.
   const contractStatus: Record<string, string> = {};
   for (const row of contractRows ?? []) {
@@ -58,6 +61,7 @@ export default async function ProjectsPage() {
         <ProjectsTable
           projects={projects}
           clientNames={clientNames}
+          catalogNames={catalogNames}
           contractStatus={contractStatus}
         />
       )}

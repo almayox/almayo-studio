@@ -60,8 +60,8 @@ Conventions:
 - **Crop** is stored as a CSS object-position string, `"x% y%"`, in `project_media.poster_position`, and copied to `projects.thumbnail_position` for the project card. It works for images, PDF covers and video posters.
 - **Posts** are files that share a `group_key`. Settings for the whole post are stored on its first item.
 - **Post type** is `project_media.post_type`: `post`, `carousel`, `reel`, or empty for automatic (worked out from the files). Read in `toShowPosts` in `projectMedia.ts`.
-- **Gallery images keep their own shape.** `ProjectImage` measures the image and sizes the tile from the CSS variable `--media-row`; it does not crop.
-- **Uploads**: images are shrunk in the browser to at most 1920 px on the long side (WebP). Wide banners should be exported at about 2400 px or more so they stay sharp. 3D models are `.glb`, at most 25 MB.
+- **Gallery images keep their own shape.** `ProjectImage` measures the image and never crops. Images sit in a grid: rows of one height (`--image-row`) that stretch to fill the width, and a click opens the image large. Videos, books and YouTube keep the taller `--media-row`. A single 3D model takes the full width; several sit two to a row.
+- **Uploads**: images are shrunk in the browser to at most 2400 px on the long side (WebP). Wide banners should be exported at about 2400 px wide so they stay sharp. 3D models are `.glb`, at most 25 MB.
 - `RemoteImage` uses `next/image` for public Supabase URLs.
 - When a column is added to `project_media`, also add it to: both `types.ts` files, `extraColumns` and the pending-row mappings in `ProjectForm.tsx`, and `DuplicateProjectButton.tsx`.
 
