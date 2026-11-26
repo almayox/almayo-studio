@@ -41,28 +41,14 @@ for each row execute function public.set_updated_at();
 alter table public.contracts enable row level security;
 alter table public.contract_milestones enable row level security;
 
--- Public can read sent/signed contracts by knowing the token (filter in app)
 drop policy if exists "Public read contracts by status" on public.contracts;
-create policy "Public read contracts by status"
-  on public.contracts for select
-  using (status in ('sent', 'signed') or auth.role() = 'authenticated');
+-- (removed: visitors no longer read or write this table directly; the site uses server routes)
 
 drop policy if exists "Public sign contracts" on public.contracts;
-create policy "Public sign contracts"
-  on public.contracts for update
-  using (status = 'sent')
-  with check (status in ('sent', 'signed'));
+-- (removed: visitors no longer read or write this table directly; the site uses server routes)
 
 drop policy if exists "Public read milestones" on public.contract_milestones;
-create policy "Public read milestones"
-  on public.contract_milestones for select
-  using (
-    exists (
-      select 1 from public.contracts c
-      where c.id = contract_id
-        and (c.status in ('sent', 'signed') or auth.role() = 'authenticated')
-    )
-  );
+-- (removed: visitors no longer read or write this table directly; the site uses server routes)
 
 drop policy if exists "Auth all contracts" on public.contracts;
 create policy "Auth all contracts"

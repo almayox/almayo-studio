@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
+import { padList } from "@/lib/padList";
 import { createClient } from "@/lib/supabase/client";
 import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import {
@@ -25,12 +26,6 @@ type TestimonialDraft = {
   role: string;
   company: string;
 };
-
-function padList<T>(items: T[], count: number, empty: () => T): T[] {
-  const next = [...items];
-  while (next.length < count) next.push(empty());
-  return next.slice(0, count);
-}
 
 function parseExistingTestimonials(value: unknown): TestimonialDraft[] {
   const empty = (): TestimonialDraft => ({
@@ -90,15 +85,11 @@ export function SettingsForm({
     hero_title: settings.hero_title,
     hero_subtitle: settings.hero_subtitle,
     hero_tagline: settings.hero_tagline,
-    years_experience: settings.years_experience,
     countries_served: settings.countries_served,
-    countries_list: settings.countries_list ?? "Kuwait, EU, Ethiopia",
     whatsapp_number: settings.whatsapp_number,
     tab_title: settings.tab_title ?? "",
     email: contact.email,
-    phone: contact.phone,
     location: contact.location,
-    contact_whatsapp: contact.whatsapp_number,
   });
   const [testimonials, setTestimonials] = useState<TestimonialDraft[]>(
     parseExistingTestimonials(settings.testimonials),
@@ -106,9 +97,6 @@ export function SettingsForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [faviconUrl, setFaviconUrl] = useState(settings.favicon_url || "");
-  const [faviconBusy, setFaviconBusy] = useState(false);
-  const [faviconPhase, setFaviconPhase] = useState<UploadPhase | null>(null);
   const router = useRouter();
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -140,9 +128,7 @@ export function SettingsForm({
           hero_title: form.hero_title,
           hero_subtitle: form.hero_subtitle,
           hero_tagline: form.hero_tagline,
-          years_experience: form.years_experience,
           countries_served: form.countries_served,
-          countries_list: form.countries_list,
           whatsapp_number: form.whatsapp_number,
         })
         .eq("id", settings.id);
@@ -166,7 +152,6 @@ export function SettingsForm({
         .from("site_settings")
         .update({
           tab_title: form.tab_title || null,
-          favicon_url: faviconUrl || null,
         })
         .eq("id", settings.id);
       if (updateError) throw updateError;
@@ -176,35 +161,6 @@ export function SettingsForm({
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function uploadFavicon(files: FileList) {
-    const file = files[0];
-    if (!file) return;
-    setFaviconBusy(true);
-    setFaviconPhase("compressing");
-    setError(null);
-    try {
-      const url = await uploadStudioFile(file, {
-        folder: "brand",
-        maxEdge: 256,
-        onPhase: setFaviconPhase,
-      });
-      setFaviconUrl(url);
-      const supabase = createClient();
-      const { error: updateError } = await supabase
-        .from("site_settings")
-        .update({ favicon_url: url })
-        .eq("id", settings.id);
-      if (updateError) throw updateError;
-      setMessage("Favicon uploaded.");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setFaviconBusy(false);
-      setFaviconPhase(null);
     }
   }
 
@@ -219,9 +175,7 @@ export function SettingsForm({
         .from("contact_details")
         .update({
           email: form.email,
-          phone: form.phone,
           location: form.location,
-          whatsapp_number: form.contact_whatsapp,
         })
         .eq("id", contact.id);
       if (updateError) throw updateError;
@@ -278,10 +232,8 @@ export function SettingsForm({
             ["hero_title", "Hero title"],
             ["hero_subtitle", "Hero subtitle"],
             ["hero_tagline", "Hero tagline"],
-            ["years_experience", "Years experience"],
-            ["countries_served", "Countries served (count)"],
-            ["countries_list", "Countries served (names, comma separated)"],
-            ["whatsapp_number", "WhatsApp number"],
+            ["countries_served", "Countries served"],
+            ["whatsapp_number", "WhatsApp and phone number"],
           ] as const
         ).map(([key, label]) => (
           <label key={key} className={labelClass}>
@@ -309,7 +261,7 @@ export function SettingsForm({
             Browser tab
           </h2>
           <p className="mt-1 text-sm text-fg/55">
-            Tab title and favicon shown in the browser.
+            The title shown in the browser tab.
           </p>
         </div>
         <label className={labelClass}>
@@ -320,24 +272,6 @@ export function SettingsForm({
             className={fieldClass}
           />
         </label>
-        <div className="rounded-lg border border-line bg-subtle/40 p-4">
-          <p className="text-sm font-medium text-fg">Favicon</p>
-          {faviconUrl ? (
-            <StorageImage src={faviconUrl} alt="Favicon" className="mt-2 h-10 w-10 object-contain" />
-          ) : (
-            <p className="mt-1 text-xs text-fg/50">No favicon yet</p>
-          )}
-          <DropUpload
-            onFiles={uploadFavicon}
-            accept="image/png,image/jpeg,image/webp,image/x-icon"
-            disabled={faviconBusy}
-            className="mt-3 flex flex-col items-center rounded-xl border-2 border-dashed border-line bg-surface px-3 py-5 text-center text-sm text-fg/70"
-          >
-            {faviconBusy
-              ? uploadStatusLabel(faviconPhase)
-              : "Drop favicon (32–256px recommended)"}
-          </DropUpload>
-        </div>
         <StatusMessages error={error} message={message} />
         <button type="submit" disabled={loading} className={primaryBtnClass}>
           {loading ? "Saving…" : "Save browser tab"}
@@ -356,9 +290,7 @@ export function SettingsForm({
         {(
           [
             ["email", "Email"],
-            ["phone", "Phone"],
             ["location", "Location"],
-            ["contact_whatsapp", "WhatsApp number"],
           ] as const
         ).map(([key, label]) => (
           <label key={key} className={labelClass}>

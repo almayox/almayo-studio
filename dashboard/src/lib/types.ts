@@ -29,6 +29,10 @@ export type Project = {
   contract_required?: boolean;
   /** How the public project page is laid out. */
   display_style?: string | null;
+  /** Where visitors can try the finished work. */
+  live_url?: string | null;
+  app_store_url?: string | null;
+  play_store_url?: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -53,6 +57,16 @@ export type ProjectMedia = {
   poster_position?: string | null;
   /** The post's kind in the social grid, on its first item; empty means automatic. */
   post_type?: "post" | "carousel" | "reel" | null;
+  /**
+   * The frame on the Website / App look; empty means worked out from the shape.
+   * "cover" is the picture for the project card only, left out of the page.
+   */
+  device?: "laptop" | "phone" | "cover" | null;
+  /**
+   * The part of the project text this file is shown beside: 1 for the first
+   * heading, 2 for the second. Empty means it sits beside the opening text.
+   */
+  section?: number | null;
   sort_order: number;
 };
 
@@ -215,12 +229,9 @@ export type SiteSettings = {
   hero_title: string;
   hero_subtitle: string;
   hero_tagline: string;
-  years_experience: string;
   countries_served: string;
-  countries_list?: string | null;
   whatsapp_number: string;
   tab_title: string | null;
-  favicon_url?: string | null;
   og_image_url?: string | null;
   testimonials?: unknown;
 };
@@ -238,9 +249,7 @@ export type AboutContent = {
 export type ContactDetails = {
   id: string;
   email: string;
-  phone: string;
   location: string;
-  whatsapp_number: string;
 };
 
 export type SocialLink = {

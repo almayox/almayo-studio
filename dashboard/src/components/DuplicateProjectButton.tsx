@@ -55,6 +55,9 @@ export function DuplicateProjectButton({ project }: { project: Project }) {
           is_featured: false,
           sort_order: project.sort_order,
           ...(project.display_style ? { display_style: project.display_style } : {}),
+          ...(project.live_url ? { live_url: project.live_url } : {}),
+          ...(project.app_store_url ? { app_store_url: project.app_store_url } : {}),
+          ...(project.play_store_url ? { play_store_url: project.play_store_url } : {}),
         })
         .select("id")
         .single();
@@ -76,6 +79,8 @@ export function DuplicateProjectButton({ project }: { project: Project }) {
             ...(item.poster_position ? { poster_position: item.poster_position } : {}),
             ...(item.group_key ? { group_key: item.group_key } : {}),
             ...(item.post_type ? { post_type: item.post_type } : {}),
+            ...(item.device ? { device: item.device } : {}),
+            ...(item.section ? { section: item.section } : {}),
           })),
         );
         if (mediaError) throw mediaError;

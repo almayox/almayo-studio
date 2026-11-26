@@ -14,7 +14,7 @@ export default async function ContactPage() {
     getContactDetails(),
     getSiteSettings(),
   ]);
-  const number = contact.whatsapp_number || settings.whatsapp_number;
+  const number = settings.whatsapp_number;
 
   return (
     <div className="mx-auto max-w-6xl px-5 pb-24 pt-32 sm:px-6">

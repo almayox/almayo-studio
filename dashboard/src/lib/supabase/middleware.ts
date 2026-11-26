@@ -52,32 +52,11 @@ export async function updateSession(request: NextRequest) {
       redirectUrl.searchParams.set("error", "unauthorized");
       return NextResponse.redirect(redirectUrl);
     }
-
-    const isMfaRoute = pathname.startsWith("/login/mfa");
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (
-      aal?.nextLevel === "aal2" &&
-      aal.currentLevel !== "aal2" &&
-      !isMfaRoute
-    ) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/login/mfa";
-      return NextResponse.redirect(redirectUrl);
-    }
   }
 
-  if (
-    user &&
-    (pathname.startsWith("/login") || pathname.startsWith("/forgot-password")) &&
-    !pathname.startsWith("/login/mfa")
-  ) {
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (user && (pathname.startsWith("/login") || pathname.startsWith("/forgot-password"))) {
     const redirectUrl = request.nextUrl.clone();
-    if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
-      redirectUrl.pathname = "/login/mfa";
-    } else {
-      redirectUrl.pathname = "/projects";
-    }
+    redirectUrl.pathname = "/projects";
     return NextResponse.redirect(redirectUrl);
   }
 

@@ -14,7 +14,6 @@
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "@tailwindcss/typography": "^0.5.20",
-    "@types/three": "^0.185.1",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.25.0",
@@ -26,14 +25,17 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.2",
+    "@types/three": "^0.185.4",
     "eslint": "^9",
     "eslint-config-next": "^16.4.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss-selector-parser": "^6.1.5"
   }
 }

@@ -58,20 +58,7 @@ create table if not exists public.campaign_asset_slides (
 alter table public.campaign_asset_slides enable row level security;
 
 drop policy if exists "Public read slides" on public.campaign_asset_slides;
-create policy "Public read slides"
-  on public.campaign_asset_slides for select
-  using (
-    exists (
-      select 1
-      from public.campaign_assets a
-      join public.campaigns c on c.id = a.campaign_id
-      where a.id = asset_id
-        and (
-          (c.status in ('review', 'approved', 'changes_requested') and c.review_disabled = false)
-          or auth.role() = 'authenticated'
-        )
-    )
-  );
+-- (removed: visitors no longer read or write this table directly; the site uses server routes)
 
 drop policy if exists "Auth all slides" on public.campaign_asset_slides;
 create policy "Auth all slides"

@@ -9,6 +9,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { Pencil } from "lucide-react";
 import { DuplicateProjectButton } from "@/components/DuplicateProjectButton";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
+import { StorageImage } from "@/components/StorageMedia";
 import type { Project } from "@/lib/types";
 
 function ContractBadge({
@@ -18,7 +19,10 @@ function ContractBadge({
   required: boolean;
   status?: string;
 }) {
-  if (!required) return <span className="text-xs text-fg/40">Not needed</span>;
+  if (!required)
+    return (
+      <span className="whitespace-nowrap text-xs text-fg/40">Not needed</span>
+    );
   const tone =
     status === "signed"
       ? "bg-emerald-50 text-emerald-700"
@@ -27,7 +31,7 @@ function ContractBadge({
         : "bg-red-50 text-red-700";
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${tone}`}
+      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium capitalize ${tone}`}
     >
       {status || "Missing"}
     </span>
@@ -210,8 +214,29 @@ export function ProjectsTable({
             {pagination.pageItems.map((project) => (
               <tr key={project.id} className="hover:bg-subtle/40">
                 <td className="px-4 py-3">
-                  <p className="font-medium text-fg">{project.title}</p>
-                  <p className="text-xs text-fg/45">/{project.slug}</p>
+                  <div className="flex items-center gap-3">
+                    {/* The 3:4 shape and crop of the project card on the site. */}
+                    {project.thumbnail_url ? (
+                      <StorageImage
+                        src={project.thumbnail_url}
+                        alt=""
+                        loading="lazy"
+                        className="h-14 w-[2.625rem] shrink-0 rounded-md bg-fg/5 object-cover ring-1 ring-line"
+                        style={{
+                          objectPosition:
+                            project.thumbnail_position ?? "50% 50%",
+                        }}
+                      />
+                    ) : (
+                      <div className="flex h-14 w-[2.625rem] shrink-0 items-center justify-center rounded-md bg-fg/5 text-[10px] text-fg/40 ring-1 ring-line">
+                        None
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-medium text-fg">{project.title}</p>
+                      <p className="text-xs text-fg/45">/{project.slug}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="hidden px-4 py-3 text-fg/70 md:table-cell">
                   {project.client_id && clientNames[project.client_id] ? (
@@ -247,18 +272,21 @@ export function ProjectsTable({
                   {project.is_featured ? "Yes" : "-"}
                 </td>
                 <td className="px-4 py-3">
-                  <ActionGroup>
-                    <ActionButton
-                      icon={Pencil}
-                      label="Edit"
-                      href={`/projects/${project.id}`}
-                    />
-                    <DuplicateProjectButton project={project} />
-                    <DeleteProjectButton
-                      id={project.id}
-                      title={project.title}
-                    />
-                  </ActionGroup>
+                  {/* Kept on one line: a long title or client name wraps instead. */}
+                  <div className="ml-auto w-max">
+                    <ActionGroup>
+                      <ActionButton
+                        icon={Pencil}
+                        label="Edit"
+                        href={`/projects/${project.id}`}
+                      />
+                      <DuplicateProjectButton project={project} />
+                      <DeleteProjectButton
+                        id={project.id}
+                        title={project.title}
+                      />
+                    </ActionGroup>
+                  </div>
                 </td>
               </tr>
             ))}

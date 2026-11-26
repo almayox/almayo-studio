@@ -45,9 +45,27 @@ type PendingMedia = {
   group_key?: string | null;
   poster_position?: string | null;
   post_type?: ProjectMedia["post_type"];
+  device?: ProjectMedia["device"];
+  section?: number | null;
 };
 
 /** A file or link ready to become a project_media row. */
+/**
+ * A tall picture that is wider than any phone screen is a screenshot of a whole
+ * web page taken on a computer, so it belongs in a laptop frame, not a phone.
+ */
+async function isDesktopPage(file: File) {
+  if (!file.type.startsWith("image/")) return false;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const desktop = bitmap.height > bitmap.width && bitmap.width >= 1400;
+    bitmap.close();
+    return desktop;
+  } catch {
+    return false;
+  }
+}
+
 type UploadedItem = {
   url: string;
   media_type: string;
@@ -65,6 +83,8 @@ function extraColumns(item: {
   group_key?: string | null;
   poster_position?: string | null;
   post_type?: string | null;
+  device?: string | null;
+  section?: number | null;
 }) {
   return {
     ...(item.poster_position ? { poster_position: item.poster_position } : {}),
@@ -73,6 +93,8 @@ function extraColumns(item: {
     ...(item.rtl ? { rtl: true } : {}),
     ...(item.group_key ? { group_key: item.group_key } : {}),
     ...(item.post_type ? { post_type: item.post_type } : {}),
+    ...(item.device ? { device: item.device } : {}),
+    ...(item.section ? { section: item.section } : {}),
   };
 }
 
@@ -80,7 +102,15 @@ const DISPLAY_STYLES = [
   { value: "gallery", label: "Standard gallery", hint: "Images and videos in rows, each in its own shape." },
   { value: "social", label: "Social media grid", hint: "A profile with a grid of three. Tap a post to open it; carousels swipe." },
   { value: "video", label: "Video player", hint: "A large player with a red progress bar and the other videos listed beside it." },
+  { value: "web", label: "Website / App", hint: "Wide screenshots sit in a browser window, tall ones in a phone. A full-page screenshot scrolls inside the window." },
 ];
+
+/** A link as typed, with https:// added when it was left out. Empty stays empty. */
+function cleanLink(value: string) {
+  const link = value.trim();
+  if (!link) return null;
+  return /^https?:\/\//i.test(link) ? link : `https://${link}`;
+}
 
 const SETUP_NEEDED =
   "The database needs an update first: run supabase/schema_project_video_thumbnails.sql in Supabase.";
@@ -99,8 +129,19 @@ export function ProjectForm({
   const [title, setTitle] = useState(project?.title ?? "");
   const [slug, setSlug] = useState(project?.slug ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
+  // The headings in the text; on the Website / App look each file can be shown beside one.
+  const textSections = useMemo(
+    () =>
+      [...description.matchAll(/<h[1-4][^>]*>([\s\S]*?)<\/h[1-4]>/gi)].map((match) =>
+        match[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim(),
+      ),
+    [description],
+  );
   const [tags, setTags] = useState(project?.tags ?? "");
   const [techStack, setTechStack] = useState(project?.tech_stack ?? "");
+  const [liveUrl, setLiveUrl] = useState(project?.live_url ?? "");
+  const [appStoreUrl, setAppStoreUrl] = useState(project?.app_store_url ?? "");
+  const [playStoreUrl, setPlayStoreUrl] = useState(project?.play_store_url ?? "");
   const [catalogId, setCatalogId] = useState(project?.catalog_id ?? "");
   const [clientId, setClientId] = useState(project?.client_id ?? initialClientId);
   const [contractRequired, setContractRequired] = useState(
@@ -190,6 +231,7 @@ export function ProjectForm({
         }
         uploaded.push({
           url,
+          ...(displayStyle === "web" && (await isDesktopPage(file)) ? { device: "laptop" as const } : {}),
           media_type: file.type.startsWith("video/") ? "video" : "image",
           // A large video is stored as a compressed MP4, whatever it was.
           mime_type: /\.mp4$/i.test(url) ? "video/mp4" : file.type || null,
@@ -240,7 +282,7 @@ export function ProjectForm({
 
   function showMediaError(err: unknown, fallback: string) {
     const message = (err as { message?: string } | null)?.message || fallback;
-    setError(/pages|rtl|group_key|poster_url|poster_position|post_type/.test(message) ? SETUP_NEEDED : message);
+    setError(/pages|rtl|group_key|poster_url|poster_position|post_type|device|section/.test(message) ? SETUP_NEEDED : message);
   }
 
   async function onGalleryFiles(files: FileList) {
@@ -401,6 +443,10 @@ export function ProjectForm({
         ...(displayStyle !== "gallery" || project?.display_style
           ? { display_style: displayStyle }
           : {}),
+        // The same for the links: only sent once one has been filled in.
+        ...(liveUrl || project?.live_url ? { live_url: cleanLink(liveUrl) } : {}),
+        ...(appStoreUrl || project?.app_store_url ? { app_store_url: cleanLink(appStoreUrl) } : {}),
+        ...(playStoreUrl || project?.play_store_url ? { play_store_url: cleanLink(playStoreUrl) } : {}),
       };
 
       if (isEdit && project) {
@@ -439,7 +485,7 @@ export function ProjectForm({
       router.refresh();
     } catch (err) {
       const message = (err as { message?: string } | null)?.message || "Save failed";
-      setError(/display_style|pages|rtl|group_key|poster_url|post_type/.test(message) ? SETUP_NEEDED : message);
+      setError(/display_style|live_url|app_store_url|play_store_url|pages|rtl|group_key|poster_url|post_type|device|section/.test(message) ? SETUP_NEEDED : message);
       setLoading(false);
     }
   }
@@ -459,6 +505,8 @@ export function ProjectForm({
         group_key: item.group_key ?? null,
         poster_position: item.poster_position ?? null,
         post_type: item.post_type ?? null,
+        device: item.device ?? null,
+        section: item.section ?? null,
         sort_order: 0,
       }));
 
@@ -614,10 +662,44 @@ export function ProjectForm({
         </label>
 
         <label className="block text-sm font-medium text-fg">
-          Tech stack
+          Tech stack (comma separated)
           <input
             value={techStack}
             onChange={(e) => setTechStack(e.target.value)}
+            placeholder="Next.js, Supabase, Expo"
+            className={fieldClass}
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-fg">
+          Live website link
+          <input
+            value={liveUrl}
+            onChange={(e) => setLiveUrl(e.target.value)}
+            placeholder="https://"
+            inputMode="url"
+            className={fieldClass}
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-fg">
+          App Store link
+          <input
+            value={appStoreUrl}
+            onChange={(e) => setAppStoreUrl(e.target.value)}
+            placeholder="https://apps.apple.com/…"
+            inputMode="url"
+            className={fieldClass}
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-fg">
+          Google Play link
+          <input
+            value={playStoreUrl}
+            onChange={(e) => setPlayStoreUrl(e.target.value)}
+            placeholder="https://play.google.com/…"
+            inputMode="url"
             className={fieldClass}
           />
         </label>
@@ -657,7 +739,7 @@ export function ProjectForm({
         <p className="mt-1 text-xs text-fg/50">
           How visitors see this project. A PDF always opens as a book, whichever you choose.
         </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {DISPLAY_STYLES.map((style) => (
             <label
               key={style.value}
@@ -708,6 +790,8 @@ export function ProjectForm({
                   group_key: item.group_key,
                   poster_position: item.poster_position,
                   post_type: item.post_type,
+                  device: item.device,
+                  section: item.section,
                 })),
               );
             }
@@ -722,6 +806,36 @@ export function ProjectForm({
             if (image) setCropFor({ id: item.id, image, position: item.poster_position });
           }}
           grouping={displayStyle === "social"}
+          devices={displayStyle === "web"}
+          onCycleDevice={(item) =>
+            void patchMedia([
+              {
+                id: item.id,
+                values: {
+                  device:
+                    !item.device
+                      ? "laptop"
+                      : item.device === "laptop"
+                        ? "phone"
+                        : item.device === "phone"
+                          ? "cover"
+                          : null,
+                },
+              },
+            ])
+          }
+          sections={displayStyle === "web" ? textSections : []}
+          onCycleSection={(item) =>
+            void patchMedia([
+              {
+                id: item.id,
+                values: {
+                  // Past the last heading it returns to the opening text.
+                  section: (item.section ?? 0) >= textSections.length ? null : (item.section ?? 0) + 1,
+                },
+              },
+            ])
+          }
           onToggleJoin={toggleJoin}
           onCyclePostType={cyclePostType}
           onToggleRtl={(item) => void patchMedia([{ id: item.id, values: { rtl: !item.rtl } }])}

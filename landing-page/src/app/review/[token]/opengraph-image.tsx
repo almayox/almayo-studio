@@ -62,7 +62,7 @@ async function campaignPicture(token: string) {
 export default async function ReviewLinkImage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const picture = await campaignPicture(token).catch(() => null);
-  const source = picture ?? Buffer.from(await StudioImage().arrayBuffer());
+  const source = picture ?? Buffer.from(await (await StudioImage()).arrayBuffer());
   const jpeg = await sharp(source)
     .rotate()
     .resize(size.width, size.height, { fit: "cover", position: "attention" })

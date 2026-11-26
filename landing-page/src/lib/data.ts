@@ -48,15 +48,14 @@ async function signClient<T extends { logo_url?: string | null }>(client: T) {
   };
 }
 
-async function signSettings(settings: SiteSettings) {
+/** An uploaded catalog icon is a storage link; a built-in one is just a name. */
+async function signCatalog(catalog: Catalog): Promise<Catalog> {
   return {
-    ...settings,
-    favicon_url: settings.favicon_url
-      ? await signStorageUrl(settings.favicon_url)
-      : settings.favicon_url,
-    og_image_url: settings.og_image_url
-      ? await signStorageUrl(settings.og_image_url)
-      : settings.og_image_url,
+    ...catalog,
+    icon:
+      catalog.icon && catalog.icon.startsWith("http")
+        ? (await publicAssetUrl(catalog.icon)) || catalog.icon
+        : catalog.icon,
   };
 }
 
@@ -73,8 +72,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
   if (!hasSupabaseEnv()) return FALLBACK_SETTINGS;
   const supabase = await createClient();
   const { data } = await supabase.from("site_settings").select("*").limit(1).maybeSingle();
-  const settings = (data as SiteSettings) ?? FALLBACK_SETTINGS;
-  return signSettings(settings);
+  return (data as SiteSettings) ?? FALLBACK_SETTINGS;
 }
 
 export async function getAboutContent(): Promise<AboutContent> {
@@ -134,15 +132,7 @@ export async function getCatalogs(): Promise<Catalog[]> {
     .eq("is_visible", true)
     .order("sort_order", { ascending: true });
   const catalogs = (data as Catalog[]) ?? [];
-  return Promise.all(
-    catalogs.map(async (catalog) => ({
-      ...catalog,
-      icon:
-        catalog.icon && catalog.icon.startsWith("http")
-          ? (await publicAssetUrl(catalog.icon)) || catalog.icon
-          : catalog.icon,
-    })),
-  );
+  return Promise.all(catalogs.map(signCatalog));
 }
 
 export async function getClients(): Promise<Client[]> {
@@ -244,13 +234,7 @@ export async function getCatalogBySlug(slug: string): Promise<{
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  const signedCatalog = {
-    ...(catalog as Catalog),
-    icon:
-      catalog.icon && catalog.icon.startsWith("http")
-        ? (await publicAssetUrl(catalog.icon)) || catalog.icon
-        : catalog.icon,
-  };
+  const signedCatalog = await signCatalog(catalog as Catalog);
 
   return {
     catalog: signedCatalog,
@@ -259,16 +243,32 @@ export async function getCatalogBySlug(slug: string): Promise<{
 }
 
 /** How a project page is laid out. Unknown or missing values fall back to the gallery. */
-export type DisplayStyle = "gallery" | "social" | "video";
+export type DisplayStyle = "gallery" | "social" | "video" | "web";
+
+/** Where visitors can try the finished work. */
+export type ProjectLinks = { live: string | null; appStore: string | null; playStore: string | null };
+const NO_LINKS: ProjectLinks = { live: null, appStore: null, playStore: null };
+
+/** Only web links are passed on to the page. */
+function webLink(value: unknown) {
+  return typeof value === "string" && /^https?:\/\//i.test(value) ? value : null;
+}
 
 export async function getProjectBySlug(slug: string): Promise<{
   project: ProjectWithCatalog | null;
   media: ProjectMedia[];
   displayStyle: DisplayStyle;
+  links: ProjectLinks;
   /** The client's logo, for the looks that show a profile picture. */
   clientLogo: string | null;
 }> {
-  const none = { project: null, media: [], displayStyle: "gallery" as const, clientLogo: null };
+  const none = {
+    project: null,
+    media: [],
+    displayStyle: "gallery" as const,
+    links: NO_LINKS,
+    clientLogo: null,
+  };
   if (!hasSupabaseEnv()) return none;
   const supabase = await createClient();
   const { data: project } = await supabase
@@ -284,8 +284,13 @@ export async function getProjectBySlug(slug: string): Promise<{
 
   // Asked for on their own, so the page still works if the database has not
   // been given the display_style column yet, or the client is not public.
-  const [{ data: styleRow }, { data: clientRow }] = await Promise.all([
+  const [{ data: styleRow }, { data: linkRow }, { data: clientRow }] = await Promise.all([
     supabase.from("projects").select("display_style").eq("id", projectId).maybeSingle(),
+    supabase
+      .from("projects")
+      .select("live_url, app_store_url, play_store_url")
+      .eq("id", projectId)
+      .maybeSingle(),
     clientId
       ? supabase.from("clients").select("logo_url").eq("id", clientId).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -318,7 +323,12 @@ export async function getProjectBySlug(slug: string): Promise<{
   return {
     project: await signProject(project as unknown as ProjectWithCatalog),
     media: signedMedia,
-    displayStyle: style === "social" || style === "video" ? style : "gallery",
+    displayStyle: style === "social" || style === "video" || style === "web" ? style : "gallery",
+    links: {
+      live: webLink((linkRow as Record<string, unknown> | null)?.live_url),
+      appStore: webLink((linkRow as Record<string, unknown> | null)?.app_store_url),
+      playStore: webLink((linkRow as Record<string, unknown> | null)?.play_store_url),
+    },
     clientLogo: logo ? await publicAssetUrl(logo) : null,
   };
 }

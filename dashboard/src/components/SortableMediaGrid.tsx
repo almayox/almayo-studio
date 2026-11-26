@@ -33,6 +33,10 @@ function SortableMediaItem({
   onCrop,
   postType,
   onCyclePostType,
+  device,
+  onCycleDevice,
+  section,
+  onCycleSection,
 }: {
   item: ProjectMedia;
   onDelete: () => void;
@@ -49,6 +53,12 @@ function SortableMediaItem({
   /** The post's kind as a label, on the first item of each post; null hides the control. */
   postType: string | null;
   onCyclePostType: () => void;
+  /** The frame as a label, on the Website / App look; null hides the control. */
+  device: string | null;
+  onCycleDevice: () => void;
+  /** The part of the text the file is shown beside, as a label; null hides the control. */
+  section: string | null;
+  onCycleSection: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -214,6 +224,38 @@ function SortableMediaItem({
           Type: {postType}
         </button>
       ) : null}
+      {device ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCycleDevice();
+          }}
+          title="The device this file is shown on. Press to change: Auto, Laptop, Phone, Cover only (the picture for the project card, not shown on the page)."
+          className={`absolute bottom-1.5 left-1.5 z-10 cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+            item.device ? "bg-amber-400 text-black hover:bg-amber-300" : "bg-black/65 text-white hover:bg-black/85"
+          }`}
+        >
+          Frame: {device}
+        </button>
+      ) : null}
+      {section ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCycleSection();
+          }}
+          title="The part of the project text this file is shown beside on the site. Press to change: the opening text, then each heading in the text."
+          className={`absolute bottom-9 left-1.5 z-10 max-w-[60%] cursor-pointer truncate rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+            item.section ? "bg-amber-400 text-black hover:bg-amber-300" : "bg-black/65 text-white hover:bg-black/85"
+          }`}
+        >
+          Text: {section}
+        </button>
+      ) : null}
       {joined === null ? null : (
         <button
           type="button"
@@ -244,6 +286,7 @@ function SortableMediaItem({
   );
 }
 
+const DEVICE_LABEL = { auto: "Auto", laptop: "Laptop", phone: "Phone", cover: "Cover only" } as const;
 const POST_TYPE_LABEL = { auto: "Auto", post: "Post", carousel: "Carousel", reel: "Reel" } as const;
 
 /** "2/3" for the second of three items sharing a post, or null when it stands alone. */
@@ -263,6 +306,10 @@ export function SortableMediaGrid({
   onToggleRtl,
   onCrop,
   onCyclePostType,
+  devices = false,
+  onCycleDevice,
+  sections = [],
+  onCycleSection,
 }: {
   items: ProjectMedia[];
   onReorder: (items: ProjectMedia[]) => void;
@@ -274,6 +321,12 @@ export function SortableMediaGrid({
   onToggleRtl: (item: ProjectMedia) => void;
   onCrop: (item: ProjectMedia) => void;
   onCyclePostType: (item: ProjectMedia) => void;
+  /** Show the control that picks a laptop or a phone frame for each file. */
+  devices?: boolean;
+  onCycleDevice?: (item: ProjectMedia) => void;
+  /** The headings of the project text; with any, each file can be shown beside one. */
+  sections?: string[];
+  onCycleSection?: (item: ProjectMedia) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -321,6 +374,22 @@ export function SortableMediaGrid({
                   : null
               }
               onCyclePostType={() => onCyclePostType(item)}
+              device={
+                devices && (item.media_type === "image" || item.media_type === "video")
+                  ? DEVICE_LABEL[item.device ?? "auto"]
+                  : null
+              }
+              onCycleDevice={() => onCycleDevice?.(item)}
+              section={
+                sections.length &&
+                item.device !== "cover" &&
+                (item.media_type === "image" || item.media_type === "video")
+                  ? item.section
+                    ? `${item.section}. ${sections[item.section - 1] ?? "(no heading)"}`
+                    : "Opening"
+                  : null
+              }
+              onCycleSection={() => onCycleSection?.(item)}
             />
           ))}
         </div>

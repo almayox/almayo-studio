@@ -7,10 +7,6 @@ export function isBcryptHash(hash: string) {
   return hash.startsWith(BCRYPT_PREFIX);
 }
 
-export async function hashPassword(password: string) {
-  return bcrypt.hash(password.trim(), 12);
-}
-
 export async function verifyPassword(password: string, storedHash: string) {
   const trimmed = password.trim();
   if (!storedHash) return false;

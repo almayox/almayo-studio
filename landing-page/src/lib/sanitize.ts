@@ -63,3 +63,27 @@ export function richTextToPlain(html: string | null | undefined, maxLength = 300
     .trim();
   return text.length > maxLength ? `${text.slice(0, maxLength - 1).trimEnd()}…` : text;
 }
+
+export type RichTextSection = { title: string; html: string };
+
+/**
+ * Splits cleaned rich text at its headings, so a page can lay it out in parts:
+ * the text before the first heading, then one section for each heading.
+ * Pass text that has already been through sanitizeRichText.
+ */
+export function splitRichText(html: string): {
+  intro: string;
+  sections: RichTextSection[];
+} {
+  // Empty paragraphs are left behind by the editor at the end of a text.
+  const clean = html.replace(/<p[^>]*>(\s|<br\s*\/?>)*<\/p>/gi, "");
+  const parts = clean.split(/<h[1-4][^>]*>([\s\S]*?)<\/h[1-4]>/i);
+  const sections: RichTextSection[] = [];
+  // After a split with one capture group: text, title, text, title, text…
+  for (let i = 1; i < parts.length; i += 2) {
+    const title = richTextToPlain(parts[i], 120);
+    const body = (parts[i + 1] ?? "").trim();
+    if (title || body) sections.push({ title, html: body });
+  }
+  return { intro: (parts[0] ?? "").trim(), sections };
+}

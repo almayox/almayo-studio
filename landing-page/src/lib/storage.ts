@@ -74,17 +74,6 @@ export async function publicAssetUrl(url: string | null | undefined): Promise<st
   return signed;
 }
 
-export async function signStorageUrls(
-  urls: Array<string | null | undefined>,
-  expiresIn = 3600,
-) {
-  return Promise.all(urls.map((url) => signStorageUrl(url, expiresIn)));
-}
-
-export function isSupabaseStorageUrl(url: string | null | undefined) {
-  return Boolean(parseSupabaseStorageUrl(url));
-}
-
 export function toStoredStorageUrl(bucket: string, path: string) {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!base) return `${bucket}/${path}`;

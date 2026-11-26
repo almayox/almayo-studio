@@ -9,7 +9,11 @@ import {
   getProjects,
   getSiteSettings,
 } from "@/lib/data";
-import { parseSkills, parseTestimonials } from "@/lib/content";
+import {
+  parseSkills,
+  parseTestimonials,
+  yearsOfExperience,
+} from "@/lib/content";
 
 const PROCESS_STEPS = [
   {
@@ -44,7 +48,7 @@ export default async function HomePage() {
   const testimonials = parseTestimonials(settings.testimonials).slice(0, 3);
   const visibleClients = clients.slice(0, 10);
   const stats = [
-    { value: settings.years_experience, label: "Years Experience" },
+    { value: `${yearsOfExperience()}+`, label: "Years Experience" },
     { value: projectCount, label: "Projects Delivered" },
     { value: clients.length, label: "Happy Clients" },
     { value: settings.countries_served, label: "Countries Served" },
@@ -65,11 +69,16 @@ export default async function HomePage() {
         <section className="border-b border-mist bg-white">
           <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-y-8 px-2 py-12 sm:px-3">
             {stats.map((stat) => (
-              <Reveal key={stat.label} className="w-1/2 px-3 text-center sm:w-1/4">
+              <Reveal
+                key={stat.label}
+                className="w-1/2 px-3 text-center sm:w-1/4"
+              >
                 <p className="font-[family-name:var(--font-display)] text-3xl text-navy sm:text-4xl">
                   {stat.value}
                 </p>
-                <p className="mt-1 text-sm font-medium text-navy/55">{stat.label}</p>
+                <p className="mt-1 text-sm font-medium text-navy/55">
+                  {stat.label}
+                </p>
               </Reveal>
             ))}
           </div>
@@ -105,7 +114,9 @@ export default async function HomePage() {
               <h2 className="font-[family-name:var(--font-display)] text-3xl text-navy">
                 Featured Work
               </h2>
-              <p className="mt-1 text-navy/55">Handpicked highlights from my portfolio</p>
+              <p className="mt-1 text-navy/55">
+                Handpicked highlights from my portfolio
+              </p>
             </div>
             <Link
               href="/projects"
@@ -127,7 +138,10 @@ export default async function HomePage() {
             <Reveal>
               <p className="text-navy/65">
                 New work is on its way.{" "}
-                <Link href="/contact" className="font-medium text-navy underline underline-offset-4">
+                <Link
+                  href="/contact"
+                  className="font-medium text-navy underline underline-offset-4"
+                >
                   Get in touch
                 </Link>{" "}
                 to see recent projects.
@@ -144,7 +158,8 @@ export default async function HomePage() {
               How I work
             </h2>
             <p className="mt-2 text-navy/55">
-              A clear path from first conversation to a launch you can stand behind.
+              A clear path from first conversation to a launch you can stand
+              behind.
             </p>
           </Reveal>
           <div className="grid gap-10 md:grid-cols-3 md:gap-8">
@@ -156,7 +171,9 @@ export default async function HomePage() {
                 <h3 className="mt-3 font-[family-name:var(--font-display)] text-2xl text-navy">
                   {item.title}
                 </h3>
-                <p className="mt-3 text-sm leading-relaxed text-navy/65">{item.body}</p>
+                <p className="mt-3 text-sm leading-relaxed text-navy/65">
+                  {item.body}
+                </p>
               </Reveal>
             ))}
           </div>
@@ -170,11 +187,15 @@ export default async function HomePage() {
               <h2 className="font-[family-name:var(--font-display)] text-3xl text-navy">
                 Client words
               </h2>
-              <p className="mt-2 text-navy/55">What partners say after we ship.</p>
+              <p className="mt-2 text-navy/55">
+                What partners say after we ship.
+              </p>
             </Reveal>
             <div
               className={`grid gap-12 ${
-                testimonials.length > 1 ? "md:grid-cols-2 lg:grid-cols-3" : "max-w-3xl"
+                testimonials.length > 1
+                  ? "md:grid-cols-2 lg:grid-cols-3"
+                  : "max-w-3xl"
               }`}
             >
               {testimonials.map((item, i) => (
@@ -187,7 +208,9 @@ export default async function HomePage() {
                       <p className="font-medium text-navy">{item.name}</p>
                       {item.role || item.company ? (
                         <p className="mt-1 text-sm text-navy/50">
-                          {[item.role, item.company].filter(Boolean).join(" · ")}
+                          {[item.role, item.company]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </p>
                       ) : null}
                     </footer>
@@ -200,7 +223,11 @@ export default async function HomePage() {
       ) : null}
 
       {visibleClients.length > 0 ? (
-        <section className={testimonials.length > 0 ? "bg-foam py-16" : "bg-white py-16"}>
+        <section
+          className={
+            testimonials.length > 0 ? "bg-foam py-16" : "bg-white py-16"
+          }
+        >
           <div className="mx-auto max-w-6xl px-5 sm:px-6">
             <Reveal className="mb-10 text-center">
               <h2 className="font-[family-name:var(--font-display)] text-3xl text-navy">
@@ -215,7 +242,10 @@ export default async function HomePage() {
               ))}
             </div>
             <div className="mt-8 text-center">
-              <Link href="/clients" className="text-sm font-medium text-navy hover:underline">
+              <Link
+                href="/clients"
+                className="text-sm font-medium text-navy hover:underline"
+              >
                 View all clients →
               </Link>
             </div>

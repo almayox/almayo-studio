@@ -4,13 +4,7 @@ import { scanFileBuffer } from "@/lib/fileScan";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { toStoredStorageUrl } from "@/lib/storage";
 import { isAllowedAdmin } from "@/lib/adminAccess";
-import { isSafeFolder, isUploadBucket } from "@/lib/uploadPaths";
-
-const MAX_BYTES = 25 * 1024 * 1024;
-
-function safeName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-");
-}
+import { isSafeFolder, isUploadBucket, safeName, UPLOAD_MAX_BYTES } from "@/lib/uploadPaths";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -42,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());
-  const scan = await scanFileBuffer(buffer, file.name, file.type, MAX_BYTES);
+  const scan = await scanFileBuffer(buffer, file.name, file.type, UPLOAD_MAX_BYTES);
   if (!scan.ok) {
     return NextResponse.json({ message: scan.reason }, { status: 400 });
   }
@@ -63,11 +57,9 @@ export async function POST(request: Request) {
   }
 
   const storedUrl = toStoredStorageUrl(bucket, path);
-  const { data: signed } = await admin.storage.from(bucket).createSignedUrl(path, 3600);
 
   return NextResponse.json({
     url: storedUrl,
-    displayUrl: signed?.signedUrl || storedUrl,
     path,
     bucket,
   });

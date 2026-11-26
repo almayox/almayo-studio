@@ -25,6 +25,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { token } = await params;
   const campaign = hasSupabaseEnv() ? await getReviewCampaignByToken(token) : null;
   if (!campaign) return { title: "Content review", robots };
+  // A locked review says nothing about the client or the campaign until it is opened.
+  if (campaign.review_password_hash) {
+    const cookie = (await cookies()).get(reviewCookieName(token))?.value;
+    if (!verifyReviewAccessValue(cookie, token, campaign.review_password_hash)) {
+      return { title: "Content review", robots };
+    }
+  }
 
   const title = [campaign.clients?.name, campaign.title].filter(Boolean).join(" | ");
   const description = ["Content ready for your review", monthLabel(campaign.month)]

@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DropUpload } from "@/components/DropUpload";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { padList } from "@/lib/padList";
 import { createClient } from "@/lib/supabase/client";
 import { uploadStatusLabel, uploadStudioFile, type UploadPhase } from "@/lib/upload";
 import {
@@ -22,12 +23,6 @@ type ExperienceDraft = {
   description: string;
 };
 type CertDraft = { name: string; issuer: string; year: string };
-
-function padList<T>(items: T[], count: number, empty: () => T): T[] {
-  const next = [...items];
-  while (next.length < count) next.push(empty());
-  return next.slice(0, count);
-}
 
 function parseServices(value: unknown): ServiceDraft[] {
   const empty = (): ServiceDraft => ({ title: "", description: "" });
@@ -60,7 +55,7 @@ function parseExperience(value: unknown): ExperienceDraft[] {
       };
     });
   }
-  return padList(items, 4, empty);
+  return padList(items, 8, empty);
 }
 
 function parseCerts(value: unknown): CertDraft[] {
@@ -76,7 +71,7 @@ function parseCerts(value: unknown): CertDraft[] {
       };
     });
   }
-  return padList(items, 4, empty);
+  return padList(items, 8, empty);
 }
 
 function skillsToText(skills: AboutContent["skills"]) {
@@ -418,7 +413,7 @@ export function AboutSettings({ about }: { about: AboutContent }) {
 
       <SectionCard
         title="Experience"
-        description="Up to 4 roles for the About page."
+        description="Up to 8 roles for the About page. Empty ones are left out."
         onSubmit={saveExperience}
         loading={busy === "experience"}
         message={messages.experience ?? null}

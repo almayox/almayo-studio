@@ -1,3 +1,11 @@
+/** The largest file the upload routes accept. */
+export const UPLOAD_MAX_BYTES = 25 * 1024 * 1024;
+
+/** A file name made safe for a storage path. */
+export function safeName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-");
+}
+
 export const UPLOAD_BUCKETS = ["studio-files", "project-media"] as const;
 
 const FOLDER_RE = /^[a-z0-9][a-z0-9_-]*(\/[a-z0-9][a-z0-9_-]*)*$/i;

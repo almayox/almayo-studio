@@ -3,6 +3,15 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+function hostOf(url: string | undefined) {
+  try {
+    return url ? new URL(url).hostname : null;
+  } catch {
+    return null;
+  }
+}
+const supabaseHost = hostOf(process.env.NEXT_PUBLIC_SUPABASE_URL) ?? "**.supabase.co";
+
 // Next.js needs inline scripts for hydration data; everything else is same-origin.
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -24,6 +33,7 @@ const contentSecurityPolicy = [
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -40,10 +50,12 @@ const nextConfig: NextConfig = {
     qualities: [75, 85],
     // Uploaded files never change (unique names), so optimised copies can be kept a month.
     minimumCacheTTL: 2678400,
+    // Only this project's own public files may go through the image optimiser.
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.supabase.co",
+        hostname: supabaseHost,
+        pathname: "/storage/v1/object/public/**",
       },
     ],
   },

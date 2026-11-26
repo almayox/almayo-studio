@@ -59,8 +59,9 @@ drop policy if exists "Public read contracts by status" on public.contracts;
 drop policy if exists "Public sign contracts" on public.contracts;
 drop policy if exists "Public read milestones" on public.contract_milestones;
 
--- Storage: private buckets (signed URLs via service role / authenticated client)
-update storage.buckets set public = false where id in ('project-media', 'studio-files');
+-- Storage: studio-files is private (signed URLs). project-media is public:
+-- it holds the portfolio shown on the site.
+update storage.buckets set public = false where id = 'studio-files';
 
 drop policy if exists "Public read project media files" on storage.objects;
 drop policy if exists "Public read studio files" on storage.objects;

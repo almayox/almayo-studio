@@ -167,8 +167,7 @@ create policy "Public read resume"
   on public.resume_file for select using (true);
 
 drop policy if exists "Public insert leads" on public.leads;
-create policy "Public insert leads"
-  on public.leads for insert with check (true);
+-- (removed: visitors no longer read or write this table directly; the site uses server routes)
 
 drop policy if exists "Auth all clients" on public.clients;
 create policy "Auth all clients"
@@ -203,12 +202,11 @@ create policy "Auth all logo_variants"
   on public.logo_variants for all to authenticated using (true) with check (true);
 
 insert into storage.buckets (id, name, public)
-values ('studio-files', 'studio-files', true)
+values ('studio-files', 'studio-files', false)
 on conflict (id) do nothing;
 
 drop policy if exists "Public read studio files" on storage.objects;
-create policy "Public read studio files"
-  on storage.objects for select using (bucket_id = 'studio-files');
+-- (removed: visitors no longer read or write this table directly; the site uses server routes)
 
 drop policy if exists "Auth upload studio files" on storage.objects;
 create policy "Auth upload studio files"

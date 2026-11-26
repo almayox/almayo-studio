@@ -26,7 +26,3 @@ export function parseYouTubeLink(value: string | null | undefined): YouTubeLink 
   }
   return id && ID.test(id) ? { id, short } : null;
 }
-
-export function youTubeThumbnail(id: string) {
-  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-}

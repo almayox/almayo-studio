@@ -3,10 +3,17 @@ import * as tus from "tus-js-client";
 import { GLB_MIME, validateUploadBasics } from "@/lib/fileScan";
 import { repairGlb } from "@/lib/glb";
 import { toStoredStorageUrl } from "@/lib/storage";
+import { safeName, UPLOAD_MAX_BYTES } from "@/lib/uploadPaths";
 import { compressVideo, needsVideoCompression } from "@/lib/videoCompress";
 
 // Large enough for a full-width image on a high-density screen.
 const IMAGE_MAX_EDGE = 2400;
+// A full-page screenshot of a website is many screens tall. Shrinking its
+// height to the usual limit would leave it too narrow to read, so a very tall
+// image is limited by its width instead.
+const TALL_RATIO = 2.5;
+const TALL_MAX_WIDTH = 1600;
+const TALL_MAX_HEIGHT = 16000;
 const LOGO_MAX_EDGE = 512;
 // Visually lossless for photos and artwork; the public site then serves
 // right-sized AVIF/WebP versions of this master through its image optimiser.
@@ -16,11 +23,6 @@ const LOGO_QUALITY = 0.92;
 // straight to storage with a resumable upload instead of through /api/upload.
 const RESUMABLE_THRESHOLD = 4 * 1024 * 1024;
 const CHUNK_SIZE = 6 * 1024 * 1024;
-const API_MAX_BYTES = 25 * 1024 * 1024;
-
-function safeName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-");
-}
 
 async function compressImage(
   file: File,
@@ -34,7 +36,10 @@ async function compressImage(
   if (file.size < tinyThreshold || file.type === "image/gif") return file;
 
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const tall = maxEdge === IMAGE_MAX_EDGE && bitmap.height / bitmap.width > TALL_RATIO;
+  const scale = tall
+    ? Math.min(1, TALL_MAX_WIDTH / bitmap.width, TALL_MAX_HEIGHT / bitmap.height)
+    : Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const skipThreshold = maxEdge <= LOGO_MAX_EDGE ? 300_000 : 1_200_000;
   if (scale >= 1 && file.size < skipThreshold) {
     bitmap.close();
@@ -228,7 +233,7 @@ export async function uploadStudioFile(
     }
   }
 
-  const basics = validateUploadBasics(prepared, API_MAX_BYTES);
+  const basics = validateUploadBasics(prepared, UPLOAD_MAX_BYTES);
   if (!basics.ok) throw new Error(basics.reason);
 
   const ext = prepared.name.split(".").pop() || "bin";

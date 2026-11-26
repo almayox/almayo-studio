@@ -10,3 +10,4 @@ out/
 portfolio-old-reference/
 *.log
 *.pem
+.portfolio-upload/

@@ -6,14 +6,32 @@ export function whatsappLink(number: string, message?: string) {
   return `https://wa.me/${digits}?text=${text}`;
 }
 
-export function formatCountriesList(value: string | null | undefined): string {
-  const raw = value?.trim() || "Kuwait, EU, Ethiopia";
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .join(" · ");
+/**
+ * The year I started working in each field. The site counts the years from
+ * these, so the numbers move on by themselves every January.
+ */
+export const PRACTICE_SINCE = [
+  { field: "Graphic design", since: 2014 },
+  { field: "Website design", since: 2018 },
+  { field: "Photography", since: 2019 },
+  { field: "Videography", since: 2022 },
+  { field: "Software development", since: 2024 },
+] as const;
+
+/** Whole years from the start of `since` to now, never less than 1. */
+export function yearsSince(since: number, now: Date = new Date()): number {
+  return Math.max(1, now.getFullYear() - since);
 }
+
+/** Years since my first design job: the "Years experience" figure. */
+export function yearsOfExperience(now: Date = new Date()): number {
+  return yearsSince(Math.min(...PRACTICE_SINCE.map((item) => item.since)), now);
+}
+
+export const LANGUAGES = [
+  { name: "Arabic", level: "Native" },
+  { name: "English", level: "Professional working proficiency" },
+] as const;
 
 export function parseSkills(skills: string[] | string | null | undefined): string[] {
   if (!skills) return [];
@@ -162,12 +180,9 @@ export const FALLBACK_SETTINGS = {
   hero_title: "Almayo Studio",
   hero_subtitle: "Graphic Designer & Software Engineer",
   hero_tagline: "Creating beautiful designs and powerful software solutions.",
-  years_experience: "6+",
   countries_served: "3",
-  countries_list: "Kuwait, EU, Ethiopia",
   whatsapp_number: "+96560644416",
   tab_title: "Almayo Studio",
-  favicon_url: null,
   og_image_url: null,
 };
 
@@ -207,7 +222,5 @@ export const FALLBACK_ABOUT = {
 export const FALLBACK_CONTACT = {
   id: "fallback",
   email: "almayo.online@gmail.com",
-  phone: "+96560644416",
   location: "Kuwait",
-  whatsapp_number: "+96560644416",
 };

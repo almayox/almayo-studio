@@ -5,7 +5,6 @@ import { AboutSettings } from "@/components/AboutSettings";
 import { BrandAssetsManager } from "@/components/BrandAssetsManager";
 import { ResumeUpload } from "@/components/ResumeUpload";
 import { SettingsForm, type SettingsTabId } from "@/components/SettingsForm";
-import { SecuritySettings } from "@/components/SecuritySettings";
 import { SocialLinksManager } from "@/components/SocialLinksManager";
 import { PageHeader } from "@/components/ui/PageChrome";
 import type {
@@ -17,7 +16,7 @@ import type {
   SocialLink,
 } from "@/lib/types";
 
-type TabId = SettingsTabId | "about" | "brand" | "social" | "security";
+type TabId = SettingsTabId | "about" | "brand" | "social";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
@@ -27,7 +26,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "social", label: "Social" },
   { id: "brand", label: "Brand" },
   { id: "testimonials", label: "Testimonials" },
-  { id: "security", label: "Security" },
 ];
 
 export function SettingsTabs({
@@ -72,9 +70,7 @@ export function SettingsTabs({
       </div>
 
       <div className="rounded-xl border border-line bg-surface p-5 sm:p-6">
-        {tab === "security" ? (
-          <SecuritySettings />
-        ) : tab === "social" ? (
+        {tab === "social" ? (
           <SocialLinksManager initialLinks={socialLinks} embedded />
         ) : tab === "brand" ? (
           <BrandAssetsManager

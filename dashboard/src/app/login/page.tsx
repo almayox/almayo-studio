@@ -40,12 +40,7 @@ export default function LoginPage() {
         return;
       }
 
-      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
-        router.replace("/login/mfa");
-      } else {
-        router.replace("/projects");
-      }
+      router.replace("/projects");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in");

@@ -2,16 +2,27 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RemoteImage } from "@/components/RemoteImage";
 import { Reveal, RevealItem, RevealStagger } from "@/components/Reveal";
-import { getAboutContent, getClients, getProjects, getResume, getSiteSettings } from "@/lib/data";
+import {
+  getAboutContent,
+  getClients,
+  getProjects,
+  getResume,
+  getSiteSettings,
+  getSocialLinks,
+} from "@/lib/data";
+import { sanitizeRichText } from "@/lib/sanitize";
 import {
   DEFAULT_SERVICES,
   FALLBACK_ABOUT,
+  LANGUAGES,
+  PRACTICE_SINCE,
+  yearsOfExperience,
+  yearsSince,
   parseCertifications,
   parseExperience,
   parseServices,
   parseSkills,
   whatsappLink,
-  formatCountriesList,
   type ExperienceItem,
 } from "@/lib/content";
 
@@ -25,17 +36,23 @@ function experienceTitle(item: ExperienceItem) {
 }
 
 export default async function AboutPage() {
-  const [about, settings, resume, projects, clients] = await Promise.all([
-    getAboutContent(),
-    getSiteSettings(),
-    getResume(),
-    getProjects(),
-    getClients(),
-  ]);
+  const [about, settings, resume, projects, clients, socialLinks] =
+    await Promise.all([
+      getAboutContent(),
+      getSiteSettings(),
+      getResume(),
+      getProjects(),
+      getClients(),
+      getSocialLinks(),
+    ]);
+  const instagram = socialLinks.find((link) =>
+    /instagram/i.test(`${link.platform} ${link.url}`),
+  );
+  // Counted from the year I started, so it moves on by itself.
+  const now = new Date();
 
   const projectCount = projects.length;
   const clientCount = clients.length;
-  const countriesLabel = formatCountriesList(settings.countries_list);
 
   const bio = about.bio?.trim() || FALLBACK_ABOUT.bio;
   const skills = (() => {
@@ -48,9 +65,7 @@ export default async function AboutPage() {
   })();
   const experience = (() => {
     const parsed = parseExperience(about.experience);
-    return parsed.length
-      ? parsed
-      : parseExperience(FALLBACK_ABOUT.experience);
+    return parsed.length ? parsed : parseExperience(FALLBACK_ABOUT.experience);
   })();
   const certifications = parseCertifications(about.certifications);
 
@@ -103,7 +118,7 @@ export default async function AboutPage() {
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="font-[family-name:var(--font-display)] text-3xl text-navy">
-                  {settings.years_experience}
+                  {yearsOfExperience(now)}+
                 </p>
                 <p className="mt-1 text-sm text-navy/55">Years experience</p>
               </div>
@@ -112,9 +127,6 @@ export default async function AboutPage() {
                   {settings.countries_served}
                 </p>
                 <p className="mt-1 text-sm text-navy/55">Countries served</p>
-                {countriesLabel ? (
-                  <p className="mt-1 text-xs leading-relaxed text-navy/45">{countriesLabel}</p>
-                ) : null}
               </div>
               <div>
                 <p className="font-[family-name:var(--font-display)] text-3xl text-navy">
@@ -137,6 +149,43 @@ export default async function AboutPage() {
         </div>
       </section>
 
+      <section className="bg-navy py-16 text-white">
+        <div className="mx-auto max-w-6xl px-5 sm:px-6">
+          <Reveal className="max-w-2xl">
+            <h2 className="font-[family-name:var(--font-display)] text-3xl">
+              Years in each field
+            </h2>
+            <p className="mt-2 text-white/60">
+              I started in graphic design and added a new field every few years.
+              I still work in all of them.
+            </p>
+          </Reveal>
+          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {PRACTICE_SINCE.map((item, i) => {
+              const years = yearsSince(item.since, now);
+              return (
+                <Reveal key={item.field} delay={i * 0.05}>
+                  <li className="h-full rounded-2xl bg-white/[0.06] p-5 ring-1 ring-white/10">
+                    <p className="flex items-baseline gap-2">
+                      <span className="font-[family-name:var(--font-display)] text-5xl">
+                        {years}
+                      </span>
+                      <span className="text-sm text-white/55">
+                        year{years === 1 ? "" : "s"}
+                      </span>
+                    </p>
+                    <p className="mt-4 font-medium">{item.field}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/45">
+                      Since {item.since}
+                    </p>
+                  </li>
+                </Reveal>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+
       <section className="border-t border-mist bg-foam py-16">
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
           <Reveal className="max-w-2xl">
@@ -144,8 +193,8 @@ export default async function AboutPage() {
               What I can do
             </h2>
             <p className="mt-2 text-navy/55">
-              Services I deliver for brands, startups, and teams that need design and
-              build in the same conversation.
+              Services I deliver for brands, startups, and teams that need
+              design and build in the same conversation.
             </p>
           </Reveal>
           <div className="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
@@ -158,9 +207,12 @@ export default async function AboutPage() {
                   {service.title}
                 </h3>
                 {service.description ? (
-                  <p className="mt-2 text-sm leading-relaxed text-navy/65">
-                    {service.description}
-                  </p>
+                  <div
+                    className="prose prose-sm mt-2 max-w-none leading-relaxed text-navy/65"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeRichText(service.description),
+                    }}
+                  />
                 ) : null}
               </Reveal>
             ))}
@@ -197,11 +249,16 @@ export default async function AboutPage() {
               <h2 className="font-[family-name:var(--font-display)] text-3xl text-navy">
                 Experience
               </h2>
-              <p className="mt-2 text-navy/55">Selected roles and studio work.</p>
+              <p className="mt-2 text-navy/55">
+                Where I have worked, newest first.
+              </p>
             </Reveal>
             <div className="mt-8 space-y-8">
               {experience.map((item, index) => (
-                <Reveal key={`${experienceTitle(item)}-${index}`} delay={index * 0.04}>
+                <Reveal
+                  key={`${experienceTitle(item)}-${index}`}
+                  delay={index * 0.04}
+                >
                   <article className="border-l-2 border-navy/15 pl-5">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="font-[family-name:var(--font-display)] text-xl text-navy">
@@ -214,12 +271,17 @@ export default async function AboutPage() {
                       ) : null}
                     </div>
                     {item.company ? (
-                      <p className="mt-1 text-sm font-medium text-navy/60">{item.company}</p>
+                      <p className="mt-1 text-sm font-medium text-navy/60">
+                        {item.company}
+                      </p>
                     ) : null}
                     {item.description ? (
-                      <p className="mt-3 text-sm leading-relaxed text-navy/65">
-                        {item.description}
-                      </p>
+                      <div
+                        className="prose prose-sm mt-3 max-w-none leading-relaxed text-navy/65"
+                        dangerouslySetInnerHTML={{
+                          __html: sanitizeRichText(item.description),
+                        }}
+                      />
                     ) : null}
                   </article>
                 </Reveal>
@@ -234,17 +296,27 @@ export default async function AboutPage() {
           <div className="mx-auto max-w-6xl px-5 sm:px-6">
             <Reveal>
               <h2 className="font-[family-name:var(--font-display)] text-3xl text-navy">
-                Certifications
+                Education & certificates
               </h2>
+              <p className="mt-2 text-navy/55">
+                Courses and training, newest first.
+              </p>
             </Reveal>
-            <ul className="mt-8 grid gap-5 sm:grid-cols-2">
+            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {certifications.map((item, index) => (
                 <Reveal key={`${item.name}-${index}`} delay={index * 0.04}>
-                  <li className="border-l-2 border-navy/15 pl-5">
-                    <p className="font-medium text-navy">{item.name}</p>
-                    <p className="mt-1 text-sm text-navy/55">
-                      {[item.issuer, item.year].filter(Boolean).join(" · ")}
+                  <li className="flex h-full flex-col rounded-2xl bg-foam p-5 ring-1 ring-mist">
+                    {item.year ? (
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-navy/45">
+                        {item.year}
+                      </p>
+                    ) : null}
+                    <p className="mt-2 font-[family-name:var(--font-display)] text-lg leading-snug text-navy">
+                      {item.name}
                     </p>
+                    {item.issuer ? (
+                      <p className="mt-2 text-sm text-navy/60">{item.issuer}</p>
+                    ) : null}
                   </li>
                 </Reveal>
               ))}
@@ -252,6 +324,27 @@ export default async function AboutPage() {
           </div>
         </section>
       ) : null}
+
+      <section className="border-t border-mist bg-foam py-16">
+        <div className="mx-auto max-w-6xl px-5 sm:px-6">
+          <Reveal>
+            <h2 className="font-[family-name:var(--font-display)] text-3xl text-navy">
+              Languages
+            </h2>
+          </Reveal>
+          <ul className="mt-6 flex flex-wrap gap-4">
+            {LANGUAGES.map((language) => (
+              <li
+                key={language.name}
+                className="rounded-2xl bg-white px-5 py-4 ring-1 ring-mist"
+              >
+                <p className="font-medium text-navy">{language.name}</p>
+                <p className="mt-0.5 text-sm text-navy/55">{language.level}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
       <section className="border-t border-mist bg-white py-14">
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
@@ -276,6 +369,16 @@ export default async function AboutPage() {
             >
               WhatsApp
             </a>
+            {instagram ? (
+              <a
+                href={instagram.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-navy/15 px-6 py-3 text-sm font-semibold text-navy"
+              >
+                Instagram
+              </a>
+            ) : null}
             {resume?.file_url ? (
               <a
                 href={resume.file_url}

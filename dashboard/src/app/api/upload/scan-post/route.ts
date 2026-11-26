@@ -3,9 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scanFileBuffer } from "@/lib/fileScan";
 import { isAllowedAdmin } from "@/lib/adminAccess";
-import { isSafeObjectPath, isUploadBucket } from "@/lib/uploadPaths";
-
-const MAX_BYTES = 25 * 1024 * 1024;
+import { isSafeObjectPath, isUploadBucket, UPLOAD_MAX_BYTES } from "@/lib/uploadPaths";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -42,7 +40,7 @@ export async function POST(request: Request) {
     buffer,
     path.split("/").pop() || "upload.bin",
     data.type,
-    MAX_BYTES,
+    UPLOAD_MAX_BYTES,
   );
   if (!scan.ok) {
     await admin.storage.from(bucket).remove([path]);

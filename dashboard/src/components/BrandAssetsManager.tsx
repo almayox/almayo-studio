@@ -130,7 +130,7 @@ export function BrandAssetsManager({
           />
         ))}
         <AssetSlot
-          title="OG / share image"
+          title="Share image (shown when a link is shared; 1200 × 630)"
           preview={settings.og_image_url}
           busy={busy === "og_image_url"}
           status={busy === "og_image_url" ? uploadStatusLabel(uploadPhase) : null}
