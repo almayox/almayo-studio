@@ -44,6 +44,10 @@ npm run build
 
 - Storage buckets: `project-media` is public (portfolio media, stable URLs, long cache). `studio-files` is private (receipts, contracts, campaign files) and is always read through signed URLs (`src/lib/storage.ts`, `StorageMedia.tsx` in the dashboard).
 - Admin access: Supabase sign-ups are off; policies use `public.is_admin()`, which reads the admin allowlist. Dashboard auth is checked in `dashboard/src/proxy.ts` and again in `app/(protected)/layout.tsx`.
+- Dashboard sign-in is email and password with a reset link (`/forgot-password`, `/reset-password`). There is no two-step sign-in; it was removed on the owner's request.
+- `supabase/schema_security_2.sql` is run last, and again after any older SQL file is re-run: it closes visitor access the older files would re-open.
+- One WhatsApp number for the whole site: `site_settings.whatsapp_number` (Settings → General). Years of experience are counted from `PRACTICE_SINCE` in `landing-page/src/lib/content.ts`, not from a setting.
+- Share images: a project link uses the project's card picture (`app/projects/[slug]/opengraph-image.tsx`), a review link the campaign's first picture, everything else the image uploaded in Settings → Brand (`app/opengraph-image.tsx`).
 - Public pages read only public columns (see `landing-page/src/lib/data.ts`); client email, phone and address are not readable anonymously.
 - Business rules: every project belongs to a client; a quotation converts to an invoice, never the reverse; an invoice takes part payments until paid in full.
 
